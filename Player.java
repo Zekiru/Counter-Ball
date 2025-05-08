@@ -1,13 +1,12 @@
 import java.awt.Color;
 import java.awt.event.*;
 
-public class Player extends DrawPlayer implements GameEntity, MouseListener, KeyListener {
+public class Player extends PlayerDrawable implements GameEntity, MouseListener, KeyListener {
     
     private int lives;
     private double speed, direction, range;
-    private boolean canLook, canMove, canSwing, canDash, vulnerable;
-
-    private boolean upPressed, downPressed, leftPressed, rightPressed;
+    private boolean canMove, canSwing, canDash, vulnerable;
+    private boolean isMoving, upPressed, downPressed, leftPressed, rightPressed;
 
     private Thread animThread;
 
@@ -15,79 +14,22 @@ public class Player extends DrawPlayer implements GameEntity, MouseListener, Key
         super(x, y, size, color);
 
         this.lives = 3;
-        this.speed = 0;
+        this.speed = 5;
         this.direction = 0;
         this.range = range;
 
-        this.canLook = true;
         this.canMove = true;
         this.canSwing = true;
         this.canDash = true;
         this.vulnerable = true;
 
+        this.isMoving = false;
         this.upPressed = false;
         this.downPressed = false;
         this.leftPressed = false;
         this.rightPressed = false;
 
         this.animThread = new Thread();
-    }
-
-    public void playSwingAnim() {
-        // if (animThread.isAlive()) return;
-
-        Thread swingAnim = new Thread(() -> {
-            int delay, duration;
-
-            delay = 1;
-            duration = 90;
-
-            canLook = false;
-
-            try {
-                for (int i = 0; i < duration; i++) {
-                    setRotation(getRotation() - 360/duration);
-                    if (i == duration - 1) canLook = true;
-                    Thread.sleep(delay);
-                }
-            } catch(InterruptedException ex) {
-                // . . .
-            }
-        });
-
-        animThread = new Thread(swingAnim);
-        animThread.start();
-    }
-
-    public void playChargeAnim() {
-        // if (animThread.isAlive()) return;
-
-        Thread chargeAnim = new Thread(() -> {
-            int delay, duration;
-            double current, target;
-
-            delay = 1;
-            duration = 90;
-
-            current = 0;
-            target = 1;
-
-            canLook = false;
-
-            try {
-                for (int i = 0; i < duration; i++) {
-                    if (current < target) current += 1;
-                    setRotation(getRotation() + current);
-                    if (i == duration - 1) canLook = true;
-                    Thread.sleep(delay);
-                }
-            } catch(InterruptedException ex) {
-                // . . .
-            }
-        });
-
-        // animThread = new Thread(chargeAnim);
-        chargeAnim.start();
     }
 
     @Override
@@ -133,11 +75,12 @@ public class Player extends DrawPlayer implements GameEntity, MouseListener, Key
     @Override
     public void mousePressed(MouseEvent e) {
         // Not used
-        // playChargeAnim();
+        playChargeAnim();
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
+        canLook = false;
         playSwingAnim();
     }
 
@@ -183,6 +126,8 @@ public class Player extends DrawPlayer implements GameEntity, MouseListener, Key
     }
 
     private void updateMovement() {
+        if (!canMove) return;
+
         double dx = 0;
         double dy = 0;
     
@@ -192,7 +137,8 @@ public class Player extends DrawPlayer implements GameEntity, MouseListener, Key
         if (rightPressed) dx += 1;
     
         if (dx == 0 && dy == 0) {
-            setSpeed(0);
+            isMoving = false;
+            // setSpeed(0);
         } else {
             double length = Math.sqrt(dx * dx + dy * dy);
             dx /= length;
@@ -202,32 +148,19 @@ public class Player extends DrawPlayer implements GameEntity, MouseListener, Key
             if (angle < 0) angle += 360;
     
             setDirection(angle);
-            setSpeed(5);
+            isMoving = true;
+            // setSpeed(5);
         }
     }
 
     @Override
     public void move() {
+        if (!isMoving) return;
+
         double radians = Math.toRadians(direction);
 
         this.x += Math.cos(radians) * this.speed;
         this.y += Math.sin(radians) * this.speed;
-    }
-
-    public void rotateTo(double x, double y) {
-        if (!canLook) return;
-
-        double centerX = this.x + (this.size / 2);
-        double centerY = this.y + (this.size / 2);
-    
-        double dx = x - centerX;
-        double dy = y - centerY;
-    
-        double angle = Math.toDegrees(Math.atan2(dy, dx));
-        if (angle < 0) angle += 360;
-    
-        this.setRotation(angle);       // from DrawPlayer
-        // this.setDirection(angle);      // for movement direction, optional
     }
 
     @Override

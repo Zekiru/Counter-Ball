@@ -20,46 +20,127 @@ import javax.swing.*;
 
 public class GameCanvas extends JComponent implements ActionListener, MouseListener, MouseMotionListener {
     
-    private int w, h, tickCount;
-    private double mX, mY, playerSize, playerRange, ballSize, ballSpeed;
-    private ArrayList<GameEntity> ge = new ArrayList<GameEntity>();
+    private int clientID, w, h, ballTickCount;
+    private double mX, mY;
+    // private double mX, mY, playerSize, playerRange, ballSize, ballSpeed;
+    // private int w, h;
     private Ball ball;
-    private Player player;
+    private Player player, opponent, p1, p2;
+    private double playerSize, playerRange, ballSize, ballSpeed;
+
+    private ArrayList<GameEntity> ge = new ArrayList<GameEntity>();
     private Timer timer;
 
-    public GameCanvas(int w, int h) {
+    private boolean play = false, includePlayers;
+
+    public GameCanvas (int w, int h) {
         this.w = w;
         this.h = h;
+        this.includePlayers = false;
 
-        this.tickCount = 1;
+        this.setPreferredSize(new Dimension(w, h));
+        this.timer = new Timer(10, this);
+    }
+
+    public GameCanvas(int clientID, int w, int h) {
+        this.clientID = clientID;
+        this.w = w;
+        this.h = h;
+        this.includePlayers = true;
+
+        this.ballTickCount = 1;
 
         this.setPreferredSize(new Dimension(w, h));
         this.timer = new Timer(10, this);
 
-        addMouseListener(this);
-        addMouseMotionListener(this);
+        // this.ge = ge;
+        // this.p1 = (Player) ge.get(0);
+        // this.p2 = (Player) ge.get(1);
+        // this.ball = (Ball) ge.get(2);
 
-        playerSize = 80;
-        playerRange = playerSize;
+        // playerSize = 80;
+        // playerRange = playerSize;
 
-        player = new Player(w/2 - playerSize, h/2 - playerSize, playerSize, playerRange, Color.BLACK);
+        // ballSize = 120;
+        // ballSpeed = 1;
 
+        // player1 = new Player(w*0.33 + playerSize/2, h/2 + playerSize/2, playerSize, playerRange, Color.BLUE);
+        // player2 = new Player(w*0.66 + playerSize/2, h/2 + playerSize/2, playerSize, playerRange, Color.RED);
+        // player = (clientID == 1) ? player1: player2;
+
+
+        // ball = new Ball(100, h/2 - ballSize, ballSize, Color.BLACK);
+        // ball.setSpeed(ballSpeed);
+        // ball.setDirection(45);
+
+        // setUpGameEntities();
+        // setUpListeners();
+
+        // frame.addKeyListener(player);
+        // setFocusable(true);
+        // requestFocusInWindow();
+
+        // addMouseListener(this);
+        // addMouseMotionListener(this);
+        // addKeyListener(player);
+        // addMouseListener(player);
+    }
+
+    public void play(boolean play) {
+        this.play = play;
+
+        if (play) {
+            timer.start();
+        } else {
+            timer.stop();
+        }
+        
+    }
+
+    public ArrayList<GameEntity> getGE() {
+        return ge;
+    }
+
+    public void setUpGameEntities() {
+        // Attributes:
+        playerSize = 70;
+        playerRange = 100;
         ballSize = 120;
-        ballSpeed = 1;
+        ballSpeed = 5;
 
-        ball = new Ball(100, h/2 - ballSize, ballSize, Color.BLUE);
+        // Game Entities:
+
+        if (includePlayers) {
+            p1 = new Player(w*0.25 - playerSize/2, (h - playerSize) / 2, playerSize, playerRange, Color.BLUE);
+            p2 = new Player(w*0.75 - playerSize/2, (h - playerSize) / 2, playerSize, playerRange, Color.RED);
+            player = (clientID != 2) ? p1: p2;
+            opponent = (player == p1) ? p2: p1;
+
+            p1.rotateTo(p2.getX() + p2.getW()/2, p2.getY() + p2.getH()/2);
+            p2.rotateTo(p1.getX() + p1.getW()/2, p1.getY() + p1.getH()/2);
+
+            ge.add(p1);
+            ge.add(p2);
+        }
+
+        ball = new Ball((w - ballSize) / 2, (h - ballSize) / 2, ballSize, Color.BLACK);
+
         ball.setSpeed(ballSpeed);
         ball.setDirection(45);
-
         
-        this.ge.add(player);
-        this.ge.add(ball);
+        ge.add(ball);
+    }
 
-        this.addMouseListener(player);
-        this.addKeyListener(player);
-        this.setFocusable(true);
-        this.requestFocusInWindow();
+    public void setUpListeners() {
+        if (!includePlayers) return;
 
+        setFocusable(true);
+        requestFocusInWindow();
+
+        addMouseListener(this);
+        addMouseMotionListener(this);
+        addKeyListener(player);
+        addMouseListener(player);
     }
 
     @Override
@@ -72,9 +153,9 @@ public class GameCanvas extends JComponent implements ActionListener, MouseListe
         );
         g2d.setRenderingHints(rh);
 
-        for (GameEntity e : ge) e.draw(g2d);
+        if (!play) return;
 
-        this.timer.start();
+        for (GameEntity e : ge) e.draw(g2d);
     }
 
     public void updateMousePos(MouseEvent e) {
@@ -82,19 +163,67 @@ public class GameCanvas extends JComponent implements ActionListener, MouseListe
         this.mY = e.getY();
     }
 
-    public void updateBallSpeed(int x) {
-        ballSpeed = 1 + Math.pow(Math.log(x), 2) / 5;
+    // public ArrayList<GameEntity> getGE() {
+    //     return ge;
+    // }
 
+    public void updateBallSpeed() {
+        if (ballSpeed < 17) {
+            ballSpeed += 0.003;
+        } else {
+            ballSpeed = 15 + Math.log(ballTickCount) / 4;
+            
+        }
+        
+        ballTickCount++;
         ball.setSpeed(ballSpeed);
+
+        System.out.println(ballSpeed);
     }
+
+    boolean botCanSwing = true;
 
     @Override
     public void actionPerformed(ActionEvent ae) {
         if (ae.getSource() != this.timer) return;
 
-        player.rotateTo(mX, mY);
+        if (includePlayers) {
+            player.rotateTo(mX, mY);
 
-        updateBallSpeed(tickCount);
+            double playerX = player.getX() + playerSize/2;
+            double playerY = player.getY() + playerSize/2;
+
+            opponent.rotateTo(playerX, playerY);
+        }
+
+        updateBallSpeed();
+
+        Thread aimBot = new Thread(() -> {
+            if (!botCanSwing) return;
+            int delay = 300;
+
+            double playerX = player.getX() + playerSize/2;
+            double playerY = player.getY() + playerSize/2;
+    
+            try {
+
+                if (botCanSwing) {
+                    Thread.sleep(25);
+                    ball.redirectTowards(playerX, playerY);
+                    opponent.playSwingAnim();
+                }
+                
+                botCanSwing = false;
+                Thread.sleep(delay);
+                botCanSwing = true;
+            } catch(InterruptedException ex) {
+                // ...
+            }
+        });
+    
+        Thread t = new Thread(aimBot);
+        // t.start();
+        
 
         for (GameEntity e : ge) {
             double eX, eY, eW, eH;
@@ -114,43 +243,50 @@ public class GameCanvas extends JComponent implements ActionListener, MouseListe
                 e.setY((eY < 0) ? 0 : h - eH);
             }
 
+            if (opponent.inSwingRange(ball)) {
+                // double playerX = player.getX() + playerSize/2;
+                // double playerY = player.getY() + playerSize/2;
+                
+                // ball.redirectTowards(playerX, playerY);
+                // opponent.playSwingAnim();
+
+                if (!t.isAlive()) {
+                    t = new Thread(aimBot);
+                    t.start();
+                }
+                
+            }
+
             if (e == ball) continue;
 
-            if (ball.isColliding(e)) {
+            if (p2.isColliding(ball)) {
+                // System.out.println("Collision");
                 ball.setColor(Color.RED);
-
-                // Thread stopBall = new Thread(() -> {
-                //     try {
-                //         while (ball.isColliding(e)) {
-                //             ball.setColor(Color.RED);
-                //             ball.canMove(false);
-                //             Thread.sleep(10);
-                //         }
-                //         Thread.sleep(1000);
-                //         tickCount = 1;
-                //         ball.canMove(true);
-                //     } catch (InterruptedException ie) {
-                //         // ...
-                //     }
-                // });
-
-                // stopBall.start();
-
-                // ball.bounce(true);
-                // ball.bounce(false);
-            } else {
-                ball.setColor(Color.BLUE);
+                continue;
             }
+
+            if (p1.isColliding(ball)) {
+                // System.out.println("Collision");
+                ball.setColor(Color.BLUE);
+                continue;
+            }
+
+            if (player.inSwingRange(ball) && !player.isColliding(ball)) {
+                ball.setColor(Color.GREEN);
+                continue;
+            }
+
+            ball.setColor(Color.BLACK);
+            
         }
 
-        if (player.inSwingRange(ball) && !player.isColliding(ball)) {
-            ball.setColor(Color.GREEN);
-            // System.out.println("YES");
-        }
+        // if (player.inSwingRange(ball) && !player.isColliding(ball)) {
+        //     ball.setColor(Color.GREEN);
+        //     // System.out.println("YES");
+        // }
 
         for (GameEntity e : ge) e.move();
 
-        tickCount++;
         this.repaint();
     }
 

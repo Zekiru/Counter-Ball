@@ -15,20 +15,39 @@
     of my program.
 **/
 
+import java.util.*;
 import javax.swing.*;
 
 public class GameFrame {
+
+    private int clientID, w, h;
+    private JFrame frame;
+    private GameCanvas gc;
+
+    public GameFrame(int clientID, int w, int h, GameCanvas gc) {
+        this.clientID = clientID;
+        this.w = w;
+        this.h = h;
+        this.gc = gc;
+        
+    }
+
+    public void setUpGUI() {
+        frame = new JFrame();
+        frame.add(gc);
+        frame.setTitle("Player " + clientID);
+        // frame.setSize(w, h);
+        frame.pack();
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+
+        gc.setUpGameEntities();
+        gc.setUpListeners();
+        gc.play(true);
+    } 
     
     public static void main(String[] args) {
-        
-        JFrame frame = new JFrame();
-        GameCanvas rectangleCanvas = new GameCanvas(1024, 768);
-
-        frame.add(rectangleCanvas);
-
-        frame.setTitle("Collision Detection");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.pack();
-        frame.setVisible(true);
-;    }
+        GameFrame gf = new GameFrame(1, 1024, 768, new GameCanvas(1, 1024, 768));
+        gf.setUpGUI();
+    }
 }

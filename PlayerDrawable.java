@@ -17,20 +17,27 @@ import java.awt.*;
 // import java.awt.event.*;
 // import java.awt.geom.*;
 
-public class DrawPlayer implements Drawable {
+public class PlayerDrawable implements Drawable {
     
-    protected double x, y, r, rX, rY, size;
+    protected double x, y, r, r2, rX, rY, size;
     protected Color color;
+    protected Thread thread;
+    protected boolean canLook;
 
-    public DrawPlayer(double x, double y, double size, Color color) {
+    public PlayerDrawable(double x, double y, double size, Color color) {
         this.x = x;
         this.y = y;
         this.size = size;
         this.color = color;
 
         this.r = 0;
+        this.r2 = 0;
         this.rX = x + (size/2);
         this.rY = y + (size/2);
+
+        this.canLook = true;
+
+        this.thread = new Thread();
 
     }
 
@@ -60,13 +67,93 @@ public class DrawPlayer implements Drawable {
 
         bat.setRotation(r + angleBat, rX, rY);
         handL.setRotation(r + angleHandL, rX, rY);   
-        handR.setRotation(r + angleHandR, rX, rY);    
+        handR.setRotation(r + angleHandR, rX, rY);
 
         bat.draw(g2d);
         handL.draw(g2d);
         handR.draw(g2d);
         body.draw(g2d);
 
+    }
+
+    protected void playSwingAnim() {
+        // System.out.println("SWING");
+
+        Thread swingAnim = new Thread(() -> {
+            int delay, iterations;
+
+            delay = 1;
+            iterations = 90;
+
+            canLook = false;
+
+            try {
+                for (int i = 0; i < iterations; i++) {
+                    setRotation(getRotation() - 360/iterations);
+                    if (i == iterations - 1) canLook = true;
+                    Thread.sleep(delay);
+                }
+            } catch(InterruptedException ex) {
+                // ...
+                canLook = true;
+            }
+        });
+
+        r2 = 0;
+        thread.interrupt();
+        thread = new Thread(swingAnim);
+        thread.start();
+    }
+
+    public void playChargeAnim() {
+        // System.out.println("CHARGE");
+
+        Thread chargeAnim = new Thread(() -> {
+            int delay, iterations;
+            double current, target;
+
+            delay = 1;
+            iterations = 180;
+
+            current = 0;
+            target = 70;
+
+            // canLook = false;
+
+            try {
+                for (int i = 0; i < iterations; i++) {
+                    if (current < target) current += (double) 60/iterations;
+                    r2 = current;
+                    // System.out.println(r2);
+                    // if (i == iterations - 1) canLook = true;
+                    Thread.sleep(delay);
+                    // if (i == iterations - 1) r2 = 0;
+                }
+            } catch(InterruptedException ex) {
+                // ...
+                r2 = 0;
+            }
+        });
+
+        thread.interrupt();
+        thread = new Thread(chargeAnim);
+        thread.start();
+    }
+
+    protected void rotateTo(double x, double y) {
+        if (!canLook) return;
+
+        double centerX = this.x + (this.size / 2);
+        double centerY = this.y + (this.size / 2);
+    
+        double dx = x - centerX;
+        double dy = y - centerY;
+    
+        double angle = Math.toDegrees(Math.atan2(dy, dx)) + r2;
+        if (angle < 0) angle += 360;
+    
+        this.setRotation(angle);
+        // this.setDirection(angle);    // for movement direction, optional
     }
 
     // Get
@@ -117,8 +204,8 @@ public class DrawPlayer implements Drawable {
 
     public void setRotation(double r, double x, double y) {
         this.r = r;
-        this.rX = this.x + x + (size/2);
-        this.rY = this.y + y + (size/2);
+        this.rX = x;
+        this.rY = y;
     }
 
     public void setColor(Color c) {
