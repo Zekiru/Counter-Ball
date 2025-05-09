@@ -7,16 +7,15 @@ public class GameStarter {
     
     private String host;
     private int clientID, port, delay;
-
     private GameCanvas gc;
     private GameFrame gf;
+
     private Ball ball;
     private Player player, opp;
     private double playerSize, playerRange, playerSpeed;
-    // private double playerX, playerY, playerMX, playerMY;
-    // private double oppX, oppY, oppMX, oppMY;
+    // private boolean ballDeflected = false;
 
-    private int w, h;
+    private int w, h, rfsCount, wtsCount;
 
     private Socket s;
     private DataInputStream in;
@@ -25,18 +24,9 @@ public class GameStarter {
     private ReadFromServer rfs;
     private WriteToServer wts;
 
-    // private Player player1, player2;
-    
-
-    // private CSConnection csc;
-
     public GameStarter(String host, int port) {
         this.host = host;
         this.port = port;
-
-        // this.player = new Player();
-
-        // connectToServer();
     }
 
     private void setUpConnection(DataInputStream in) {
@@ -44,13 +34,17 @@ public class GameStarter {
             // Delay (Sleep time in miliseconds)
             delay = in.readInt();
 
+            // Read/Write Count
+            rfsCount = in.readInt();
+            wtsCount = in.readInt();
+
             // Frame Attributes
             w = in.readInt();
             h = in.readInt();
 
             // Ball Attributes
             double ballSize = in.readDouble();
-            double ballInitSPeed = in.readDouble();
+            double ballSpeed = in.readDouble();
 
             // Ball Position
             double ballX = in.readDouble();
@@ -67,17 +61,11 @@ public class GameStarter {
             double oppX = in.readDouble();
             double oppY = in.readDouble();
 
-            // Initial Look Direction
-            // double playerMX = in.readDouble();
-            // double playerMY = in.readDouble();
-            // double oppMX = in.readDouble();
-            // double oppMY = in.readDouble();
-
-            ball = new Ball(ballX, ballY, ballSize, Color.BLACK);
+            ball = new Ball(w, h, delay, ballX, ballY, ballSize, ballSpeed);
             player = new Player(playerX, playerY, playerSize, playerRange, Color.BLUE);
             opp = new Player(oppX, oppY, playerSize, playerRange, Color.RED);
 
-            ball.setSpeed(ballInitSPeed);
+            ball.setSpeed(ballSpeed);
             player.setSpeed(playerSpeed);
             opp.setSpeed(playerSpeed);
 
@@ -95,14 +83,20 @@ public class GameStarter {
             clientID = in.readInt();
             setUpConnection(in);
 
+            gc = new GameCanvas(w, h, clientID, ball, player, opp);
+            gf = new GameFrame(w, h, clientID, gc);
+
             System.out.printf("Connected to server as Player %d\n", clientID);
 
             rfs = new ReadFromServer(in);
             wts = new WriteToServer(out);
+
             rfs.waitForStartMsg();
 
-            GameFrame gf = new GameFrame(clientID, ball, player, opp, w, h);
             gf.setUpGUI();
+
+            // gf = new GameFrame(w, h, clientID, ball, player, opp);
+            // gf.setUpGUI();
 
             // System.out.printf("(%f, %f)", player.getX(), player.getY());
 
@@ -116,9 +110,7 @@ public class GameStarter {
         threads.add(new Thread(rfs));
         threads.add(new Thread(wts));
 
-        for (Thread t : threads) {
-            t.start();
-        }
+        for (Thread t : threads) t.start();
     }
 
     private class ReadFromServer implements Runnable {
@@ -134,14 +126,21 @@ public class GameStarter {
         public void run() {
             try {
                 while (true) {
-                    if (opp == null || ball == null) continue;
+                    ArrayList<Double> read = new ArrayList<Double>();
 
-                    ball.setX(in.readDouble());
-                    ball.setY(in.readDouble());
+                    for (int i = 0; i < rfsCount; i++) read.add(in.readDouble());
 
-                    opp.setX(in.readDouble());
-                    opp.setY(in.readDouble());
-                    opp.setRotation(in.readDouble());
+                    if (ball != null) {
+                        ball.setX(read.get(0));
+                        ball.setY(read.get(1));
+                    }
+
+                    if (opp != null) {
+                        opp.setX(read.get(2));
+                        opp.setY(read.get(3));
+                        opp.setRotation(read.get(4));
+                    }
+                    
                 }
             } catch (IOException e) {
                 System.out.println(e);
@@ -173,9 +172,18 @@ public class GameStarter {
         public void run() {
             try {
                 while (true) {
-                    out.writeDouble(player.getX());
-                    out.writeDouble(player.getY());
-                    out.writeDouble(player.getRotation());
+                    ArrayList<Double> write = new ArrayList<Double>();
+
+                    write.add(player.getX());
+                    write.add(player.getY());
+                    write.add(gc.getMX());
+                    write.add(gc.getMY());
+                    write.add(player.getRotation());
+
+                    for (int i = 0; i < wtsCount; i++) out.writeDouble(write.get(i));
+
+                    out.writeBoolean(gc.getBallDeflected());
+
                     out.flush();
 
                     try {

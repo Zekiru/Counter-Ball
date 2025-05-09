@@ -11,19 +11,16 @@ import java.util.Random;
 public class GameServer {
 
     private static final int maxConnections = 2, delay = 10;
-    private static final int frameW = 1024, frameH = 768;
-    private static final double ballSize = 120, ballInitSPeed = 10;
+    private static final int w = 1024, h = 768, rfcCount = 5, wtcCount = 5;
+    private static final double ballSize = 120, ballSpeed = 10;
     private static final double playerSize = 70, playerRange = 100, playerSpeed = 5;
 
     private int port, connections;
     private ServerSocket ss;
-    // private ArrayList<Thread> SSConnections = new ArrayList<Thread>();
 
-    private ServerBall sb;
-    private double bX, bY, p1X, p1Y, p2X, p2Y, p1R, p2R;
-
-    // private GameCanvas gc;
-    // private Timer timer;
+    private Ball b;
+    private double bX, bY, p1X, p1Y, p1R, m1X, m1Y, p2X, p2Y, p2R, m2X, m2Y;
+    private boolean ballDeflected = false;
     
 
     private Socket p1, p2;
@@ -34,12 +31,12 @@ public class GameServer {
         this.port = port;
         this.connections = 0;
 
-        double offsetXP1 = frameW*0.25 - playerSize/2;
-        double offsetXP2 = frameW*0.75 - playerSize/2;
-        double offsetY = (frameH - playerSize) / 2;
+        double offsetXP1 = w*0.25 - playerSize/2;
+        double offsetXP2 = w*0.75 - playerSize/2;
+        double offsetY = (h - playerSize) / 2;
 
-        bX = (frameW - ballSize) / 2;
-        bY = (frameH - ballSize) / 2;
+        bX = (w - ballSize) / 2;
+        bY = (h - ballSize) / 2;
 
         p1X = offsetXP1;
         p1Y = offsetY;
@@ -47,10 +44,7 @@ public class GameServer {
         p2X = offsetXP2;
         p2Y = offsetY;
 
-        sb = new ServerBall(bX, bY, Color.BLACK);
-
-        // gc = new GameCanvas(frameW, frameH);
-        // gc.setUpGameEntities();
+        b = new Ball(w, h, delay, bX, bY, ballSize, ballSpeed);
 
         try {
             System.out.println("Starting GameServer...");
@@ -61,73 +55,22 @@ public class GameServer {
 
     }
 
-    private class ServerBall extends Ball implements Runnable {
-
-        // private Ball ball;
-        private boolean running = true;
-        private Color color;
-
-        public ServerBall(double x, double y, Color color) {
-            super(x, y, ballSize, color);
-
-            this.color = color;
-            this.setSpeed(ballInitSPeed);
-            this.setDirection(new Random().nextInt(360));
-
-        }
-
-        public void setRunning(boolean run) {
-            this.running = run;
-        }
-
-        @Override
-        public void run() {
-            canMove(true);
-            while (running) {
-                try {
-                    double bX, bY, bW, bH;
-
-                    bX = getX();
-                    bY = getY();
-                    bW = getW();
-                    bH = getH();
-
-                    if (bX < 0 || bX + bW > frameW) {
-                        bounce(true);
-                        setX((bX < 0) ? 0 : frameW - bW);
-                    }
-
-                    if (bY < 0 || bY + bH > frameH) {
-                        bounce(false);
-                        setY((bY < 0) ? 0 : frameH - bH);
-                    }
-
-                    move();
-
-                    // System.out.printf("(%f, %f)\n", bX, bY);
-
-                    Thread.sleep(delay);
-                } catch (Exception e) {
-                // ...
-                }
-            }
-            
-            
-        }
-    }
-
     private void setUpConnection(int clientID, DataOutputStream out) {
         try {
             // Delay (Sleep time in miliseconds)
             out.writeInt(delay);
 
+            // Read/Write Count
+            out.writeInt(wtcCount);
+            out.writeInt(rfcCount);
+
             // Frame Attributes
-            out.writeInt(frameW);
-            out.writeInt(frameH);
+            out.writeInt(w);
+            out.writeInt(h);
 
             // Ball Attributes
             out.writeDouble(ballSize);
-            out.writeDouble(ballInitSPeed);
+            out.writeDouble(ballSpeed);
 
             // Ball Position
             out.writeDouble(bX);
@@ -144,11 +87,7 @@ public class GameServer {
             out.writeDouble((clientID == 2) ? p2X : p1X);
             out.writeDouble(p2Y);
 
-            // Initial Look Direction
-            // out.writeDouble(clientID == 1 ? offsetXP2 + playerSize/2 : offsetXP1 + playerSize/2);
-            // out.writeDouble(offsetY + playerSize/2);
-            // out.writeDouble(clientID == 1 ? offsetXP1 + playerSize/2 : offsetXP2 + playerSize/2);
-            // out.writeDouble(offsetY + playerSize/2);
+            out.flush();
         } catch (Exception e) {
             System.out.println("Failed to set up connection.");
         }
@@ -166,9 +105,7 @@ public class GameServer {
         threads.add(new Thread(p1WTC));
         threads.add(new Thread(p2WTC));
 
-        for (Thread t : threads) {
-            t.start();
-        }
+        for (Thread t : threads) t.start();
     }
 
     public void acceptConnections() {
@@ -204,8 +141,22 @@ public class GameServer {
 
             System.out.println("Starting Game.");
 
-            Thread t = new Thread(sb);
-            t.start();
+            // Thread t = new Thread(b);
+            // t.start();
+            b.startRunnable();
+            
+            Thread detectDeflect = new Thread(() -> {
+                try {
+                    while (true) {
+                        // System.out.println();
+                        Thread.sleep(100);
+                    }
+                } catch(Exception e) {
+                    System.out.println(e);
+                }
+            });
+
+            detectDeflect.start();
 
         } catch (IOException e) {
             // ...
@@ -227,15 +178,26 @@ public class GameServer {
         public void run() {
             try {
                 while (true) {
+                    ArrayList<Double> read = new ArrayList<Double>();
+
+                    for (int i = 0; i < rfcCount; i++) read.add(in.readDouble());
+
                     if (clientID == 1) {
-                        p1X = in.readDouble();
-                        p1Y = in.readDouble();
-                        p1R = in.readDouble();
+                        p1X = read.get(0);
+                        p1Y = read.get(1);
+                        m1X = read.get(2);
+                        m1Y = read.get(3);
+                        p1R = read.get(4);
+                        if (in.readBoolean()) b.redirectTowards(m1X, m1Y);
                     } else {
-                        p2X = in.readDouble();
-                        p2Y = in.readDouble();
-                        p2R = in.readDouble();
+                        p2X = read.get(0);
+                        p2Y = read.get(1);
+                        m2X = read.get(2);
+                        m2Y = read.get(3);
+                        p2R = read.get(4);
+                        if (in.readBoolean()) b.redirectTowards(m2X, m2Y);
                     }
+                    
                 }
             } catch (IOException e) {
                 System.out.println(e);
@@ -258,18 +220,23 @@ public class GameServer {
         public void run() {
             try {
                 while (true) {
-                    out.writeDouble(sb.getX());
-                    out.writeDouble(sb.getY());
+                    ArrayList<Double> write = new ArrayList<Double>();
+
+                    write.add(b.getX());
+                    write.add(b.getY());
 
                     if (clientID == 1) {
-                        out.writeDouble(p2X);
-                        out.writeDouble(p2Y);
-                        out.writeDouble(p2R);
+                        write.add(p2X);
+                        write.add(p2Y);
+                        write.add(p2R);
                     } else {
-                        out.writeDouble(p1X);
-                        out.writeDouble(p1Y);
-                        out.writeDouble(p1R);
+                        write.add(p1X);
+                        write.add(p1Y);
+                        write.add(p1R);
                     }
+
+                    for (int i = 0; i < wtcCount; i++) out.writeDouble(write.get(i));
+
                     out.flush();
 
                     try {

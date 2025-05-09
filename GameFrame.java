@@ -15,7 +15,6 @@
     of my program.
 **/
 
-import java.util.*;
 import javax.swing.*;
 import java.awt.*;
 
@@ -25,12 +24,13 @@ public class GameFrame {
     private JFrame frame;
     private GameCanvas gc;
 
-    public GameFrame(int clientID, Ball ball, Player player, Player opp, int w, int h) {
+    public GameFrame(int w, int h, int clientID, GameCanvas gc) {
         this.clientID = clientID;
         this.w = w;
         this.h = h;
+        this.gc = gc;
 
-        this.gc = new GameCanvas(clientID, ball, player, opp, w, h);
+        // this.gc = new GameCanvas(w, h, clientID, ball, player, opp);
         
     }
 
@@ -38,8 +38,8 @@ public class GameFrame {
         frame = new JFrame();
         frame.add(gc);
         frame.setTitle("Player " + clientID);
-        // frame.setSize(w, h);
-        frame.pack();
+        frame.setSize(new Dimension(w, h));
+        // frame.pack();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
 
@@ -48,23 +48,50 @@ public class GameFrame {
 
         Thread t = new Thread(gc);
         t.start();
-        // gc.play(true);
-    } 
+    }
+
+    // public boolean getBallDeflected() {
+    //     if (gc == null) return false;
+    //     return gc.getBallDeflected();
+    // }
+
+    // public double getMX() {
+    //     if (gc == null) return 0;
+    //     return gc.getMX();
+    // }
+
+    // public double getMY() {
+    //     if (gc == null) return 0;
+    //     return gc.getMY();
+    // }
     
     public static void main(String[] args) {
         int client = 1, w = 1024, h = 768;
-        Ball ball = new Ball((w-120)/2, (h-120)/2, 120, Color.BLACK);
+        Ball ball = new Ball(
+            w,
+            h,
+            10,
+            (w-120)/2,
+            (h-120)/2,
+            120,
+            10
+        );
         ball.setSpeed(10);
         ball.canMove(true);
 
         GameFrame gf = new GameFrame(
-            client,
-            ball,
-            new Player(w*0.25 - 70/2, (h-70)/2, 70, 100, Color.BLUE),
-            new Player(w*0.75 - 70/2, (h-70)/2, 70, 100, Color.RED),
             w,
-            h
+            h,
+            client,
+            new GameCanvas(
+                w,
+                h,
+                client,
+                ball,
+                new Player(w*0.25 - 70/2, (h-70)/2, 70, 100, Color.BLUE),
+                new Player(w*0.75 - 70/2, (h-70)/2, 70, 100, Color.RED))
         );
         gf.setUpGUI();
+        ball.startRunnable();
     }
 }
