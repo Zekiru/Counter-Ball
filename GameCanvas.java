@@ -136,6 +136,34 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
                     e.setY((eY < 0) ? 0 : h - eH);
                 }
 
+                if (player.isColliding(opp)) {
+                    double dx = player.getCenterX() - opp.getCenterX();
+                    double dy = player.getCenterY() - opp.getCenterY();
+                    double distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance == 0) {
+                        // Prevent divide-by-zero (players perfectly overlapping)
+                        dx = 1;
+                        dy = 0;
+                        distance = 1;
+                    }
+
+                    double overlap = (player.getSize() / 2 + opp.getSize() / 2) - distance;
+
+                    // Normalize
+                    dx /= distance;
+                    dy /= distance;
+
+                    // Push each player away from each other by half the overlap
+                    double pushX = dx * (overlap / 2);
+                    double pushY = dy * (overlap / 2);
+
+                    player.setX(player.getX() + pushX);
+                    player.setY(player.getY() + pushY);
+                    opp.setX(opp.getX() - pushX);
+                    opp.setY(opp.getY() - pushY);
+                }
+
 
                 if (opp.isColliding(ball)) {
                     // System.out.println("Collision: Opponent");
@@ -185,8 +213,7 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
     @Override
     public void mouseReleased(MouseEvent e) {
         if (player.inSwingRange(ball)) {
-            // System.out.println("Deflected");
-            // ball.redirectTowards(mX, mY);
+            ball.redirectTowards(mX, mY);
             ballDeflected = true;
         }
     }

@@ -79,19 +79,19 @@ public class GameFrame {
         ball.setSpeed(10);
         ball.canMove(true);
 
-        GameFrame gf = new GameFrame(
+        GameCanvas gc = new GameCanvas(
             w,
             h,
             client,
-            new GameCanvas(
-                w,
-                h,
-                client,
-                ball,
-                new Player(w*0.25 - 70/2, (h-70)/2, 70, 100, Color.BLUE),
-                new Player(w*0.75 - 70/2, (h-70)/2, 70, 100, Color.RED))
+            ball,
+            new Player(w*0.25 - 70/2, (h-70)/2, 70, 100, Color.BLUE),
+            new Player(w*0.75 - 70/2, (h-70)/2, 70, 100, Color.RED)
         );
-        gf.setUpGUI();
+
+        GameFrame gf = new GameFrame(w, h, client, gc);
+        // Thread t = new Thread(gc);
+        // t.start();
         ball.startRunnable();
+        gf.setUpGUI();
     }
 }
