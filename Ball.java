@@ -11,7 +11,7 @@ public class Ball extends Circle implements GameEntity {
         this.speed = 0;
         this.direction = 0;
 
-        this.canMove = true;
+        this.canMove = false;
     }
 
     // Get

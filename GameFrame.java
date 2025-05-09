@@ -17,6 +17,7 @@
 
 import java.util.*;
 import javax.swing.*;
+import java.awt.*;
 
 public class GameFrame {
 
@@ -24,11 +25,12 @@ public class GameFrame {
     private JFrame frame;
     private GameCanvas gc;
 
-    public GameFrame(int clientID, int w, int h, GameCanvas gc) {
+    public GameFrame(int clientID, Ball ball, Player player, Player opp, int w, int h) {
         this.clientID = clientID;
         this.w = w;
         this.h = h;
-        this.gc = gc;
+
+        this.gc = new GameCanvas(clientID, ball, player, opp, w, h);
         
     }
 
@@ -43,11 +45,26 @@ public class GameFrame {
 
         gc.setUpGameEntities();
         gc.setUpListeners();
-        gc.play(true);
+
+        Thread t = new Thread(gc);
+        t.start();
+        // gc.play(true);
     } 
     
     public static void main(String[] args) {
-        GameFrame gf = new GameFrame(1, 1024, 768, new GameCanvas(1, 1024, 768));
+        int client = 1, w = 1024, h = 768;
+        Ball ball = new Ball((w-120)/2, (h-120)/2, 120, Color.BLACK);
+        ball.setSpeed(10);
+        ball.canMove(true);
+
+        GameFrame gf = new GameFrame(
+            client,
+            ball,
+            new Player(w*0.25 - 70/2, (h-70)/2, 70, 100, Color.BLUE),
+            new Player(w*0.75 - 70/2, (h-70)/2, 70, 100, Color.RED),
+            w,
+            h
+        );
         gf.setUpGUI();
     }
 }
