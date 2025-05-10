@@ -37,41 +37,43 @@ public class GameFrame {
     public void setUpGUI() {
         frame = new JFrame();
         frame.add(gc);
-        frame.setTitle("Player " + clientID);
-        frame.setSize(new Dimension(w, h));
-        // frame.pack();
+        frame.setTitle("Counter Ball - Player " + clientID);
+        // frame.setSize(new Dimension(w, h));
+        frame.pack();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
 
         gc.setUpGameEntities();
         gc.setUpListeners();
+        gc.startGameLoop();
 
-        Thread t = new Thread(gc);
-        t.start();
+        // Thread t = new Thread(gc);
+        // t.start();
+
+
     }
 
     // /*
     public static void main(String[] args) {
         int client = 1, w = 1024, h = 768;
         Ball ball = new Ball(
-            w,
-            h,
-            10,
             (w-120)/2,
             (h-120)/2,
             120,
+            10,
+            Color.BLACK,
+            w,
+            h,
             10
         );
-        ball.setSpeed(12);
-        ball.canMove(true);
 
         GameCanvas gc = new GameCanvas(
             w,
             h,
             client,
             ball,
-            new Player(w*0.25 - 70/2, (h-70)/2, 70, 100, Color.BLUE),
-            new Player(w*0.75 - 70/2, (h-70)/2, 70, 100, Color.RED)
+            new Player(1, w*0.25 - 70/2, (h-70)/2, 70, 5, 100, Color.BLUE, 3),
+            new Player(2, w*0.75 - 70/2, (h-70)/2, 70, 5, 100, Color.RED, 3)
         );
 
         GameFrame gf = new GameFrame(w, h, client, gc);

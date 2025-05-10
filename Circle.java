@@ -16,23 +16,17 @@
 import java.awt.*;
 import java.awt.geom.*;
 
-public class Circle implements Drawable {
+public class Circle extends Drawable {
     
-    protected double x, y, r, rX, rY, size;
-    protected Color color;
+    protected double size;
 
     public Circle(double x, double y, double size, Color color) {
-        this.x = x;
-        this.y = y;
+        super(x, y, size, size, color);
+
         this.size = size;
-        this.color = color;
-
-        this.r = 0;
-        this.rX = x + (size/2);
-        this.rY = y + (size/2);
-
     }
 
+    @Override
     public void draw(Graphics2D g2d) {
         AffineTransform reset = g2d.getTransform();
         Ellipse2D.Double shape = new Ellipse2D.Double(x, y, size, size);
@@ -42,62 +36,6 @@ public class Circle implements Drawable {
 
         g2d.fill(shape);
         g2d.setTransform(reset);
-    }
-
-    // Get
-    
-    public double getX() {
-        return this.x;
-    }
-
-    public double getY() {
-        return this.y;
-    }
-
-    public double getW() {
-        return this.size;
-    }
-
-    public double getH() {
-        return this.size;
-    }
-
-    public double getRotation() {
-        return this.r;
-    }
-
-    // Set
-
-    public void setX(double x) {
-        this.x = x;
-    }
-
-    public void setY(double y) {
-        this.y = y;
-    }
-
-    public void setW(double w) {
-        this.size = w;
-    }
-    
-    public void setH(double h) {
-        this.size = h;
-    }
-
-    public void setRotation(double r) {
-        this.r = r;
-        this.rX = x + (size/2);
-        this.rY = y + (size/2);
-    }
-
-    public void setRotation(double r, double x, double y) {
-        this.r = r;
-        this.rX = x;
-        this.rY = y;
-    }
-
-    public void setColor(Color c) {
-        this.color = c;
     }
 
 }

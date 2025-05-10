@@ -10,9 +10,9 @@ import java.util.Random;
 
 public class GameServer {
 
-    private static final int maxConnections = 2, delay = 10;
+    private static final int maxConnections = 2, interval = 10;
     private static final int w = 1024, h = 768, rfcCount = 5, wtcCount = 5;
-    private static final double ballSize = 120, ballSpeed = 10;
+    private static final double ballSize = 120, ballVelocity = 10;
     private static final double playerSize = 70, playerRange = 100, playerSpeed = 5;
 
     private int port, connections;
@@ -44,7 +44,7 @@ public class GameServer {
         p2X = offsetXP2;
         p2Y = offsetY;
 
-        b = new Ball(w, h, delay, bX, bY, ballSize, ballSpeed);
+        b = new Ball(bX, bY, ballSize, ballVelocity, Color.BLACK, w, h, interval);
 
         try {
             System.out.println("Starting GameServer...");
@@ -58,7 +58,7 @@ public class GameServer {
     private void setUpConnection(int clientID, DataOutputStream out) {
         try {
             // Delay (Sleep time in miliseconds)
-            out.writeInt(delay);
+            out.writeInt(interval);
 
             // Read/Write Count
             out.writeInt(wtcCount);
@@ -70,7 +70,7 @@ public class GameServer {
 
             // Ball Attributes
             out.writeDouble(ballSize);
-            out.writeDouble(ballSpeed);
+            out.writeDouble(ballVelocity);
 
             // Ball Position
             out.writeDouble(bX);
@@ -239,7 +239,7 @@ public class GameServer {
                     out.flush();
 
                     try {
-                        Thread.sleep(delay);
+                        Thread.sleep(interval);
                     } catch (InterruptedException e) {
                         System.out.println(e);
                     }

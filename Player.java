@@ -1,114 +1,99 @@
 import java.awt.*;
 import java.awt.event.*;
 
-public class Player extends PlayerDrawable implements GameEntity, MouseListener, KeyListener {
+public class Player extends GameEntity implements MouseListener, KeyListener {
     
-    private int lives;
-    private double speed, direction, range, power;
-    private boolean canMove, canDeflect, canDash, vulnerable;
-    private boolean isMoving, upPressed, downPressed, leftPressed, rightPressed;
-    private boolean mousePressed, isCharging, ballDeflected, inPostDeflect, inDeflectRange;
-    private Thread chargeAction, deflectAction, postDeflectAction;
+    private int lives, clientID;
+    private double size, velocity, direction, range, power;
+    private double mX = 0, mY = 0;
+    
+    private boolean canMove = true, canDeflect = true, canDash = true, vulnerable = true;
+    private boolean isMoving, isCharging, isDeflected, isGraced, isHit;
 
-    public Player(double x, double y, double size, double range, Color color) {
-        super(x, y, size, color);
+    private boolean mousePressed, upPressed, downPressed, leftPressed, rightPressed;
 
-        this.lives = 3;
-        this.speed = 5;
+    private PlayerRender render;
+
+    private final static Color hitColor = new Color(153, 0, 153);
+    private final static Color gracedColor = new Color(200, 200, 200);
+
+    public Player(int clientID, double x, double y, double size, double velocity, double range, Color color, int lives) {
+        super(x, y, size, size, color);
+
+        this.clientID = clientID;
+        this.size = size;
+        this.velocity = velocity;
         this.direction = 0;
         this.range = range;
         this.power = 0;
+        this.lives = lives;
 
-        this.canMove = true;
-        this.canDeflect = true;
-        this.canDash = true;
-        this.vulnerable = true;
-
-        this.isMoving = false;
-        this.upPressed = false;
-        this.downPressed = false;
-        this.leftPressed = false;
-        this.rightPressed = false;
-
-        this.mousePressed = false;
-        this.isCharging = false;
-        this.ballDeflected = false;
-        this.inPostDeflect = false;
-        this.inDeflectRange = false;
-
-        this.chargeAction = new Thread();
-        this.deflectAction = new Thread();
-        this.postDeflectAction = new Thread();
+        this.render = new PlayerRender(x, y, size, color);
     }
+
+    public int getClientID() { return this.clientID; }
+    public int getLives() { return this.lives; }
+
+    public double getSize() { return this.size; }
+    public double getVelocity() { return this.velocity; }
+    public double getDirection() { return this.direction; }
+    public double getRange() { return this.range; }
+    public double getPower() { return this.power; }
+
+    public double getCenterX() { return x + (size / 2); }
+    public double getCenterY() { return y + (size / 2); }
+    public double getR() { return render.getR(); }
+
+    public boolean isVulnerable() { return vulnerable; }
+    public boolean isMoving() { return isMoving; }
+    public boolean isCharging() { return isCharging; }
+    public boolean isDeflected() { return isDeflected; }
+    public boolean isGraced() { return isGraced; }
+    public boolean isHit() { return isHit; }
+
+    public void setVelocity(double velocity) { this.velocity = velocity; }
+    public void setDirection(double direction) { this.direction = direction; }
+    public void setRange(double range) { this.range = range; }
+
+    public void setMX(double mX) { this.mX = mX; }
+    public void setMY(double mY) { this.mY = mY; }
+
+    public void setR(double r) { render.setR(r); }
+    public void rotateTo(double x, double y) { render.rotateTo(x, y); }
 
     @Override
-    public GameEntity.Type getType() {
-        return Type.PLAYER;
+	public void update() {
+        if (!this.active || !isMoving) return;
+
+		double radians = Math.toRadians(direction);
+
+        this.x += Math.cos(radians) * this.velocity;
+        this.y += Math.sin(radians) * this.velocity;
+	}
+
+	@Override
+	public void draw(Graphics2D g2d) { 
+        render.setX(this.x);
+        render.setY(this.y);
+        render.setW(this.size);
+        render.setH(this.size);
+        render.setColor(color);
+
+        render.draw(g2d);
     }
+
+	@Override
+	public GameEntity.EntityType getType() { return EntityType.PLAYER; }
+
+
 
     @Override
-    public double getSpeed() {
-        return this.speed;
-    }
-
-    @Override
-    public double getDirection() {
-        return this.direction;
-    }
-
-    public double getRange() {
-        return this.range;
-    }
-
-    public double getCenterX() {
-        return this.x + (this.size / 2);
-    }
-
-    public double getCenterY() {
-        return this.y + (this.size / 2);
-    }
-
-    public double getSize() {
-        return this.size;
-    }
-
-    public boolean getVulnerable() {
-        return vulnerable;
-    }
-
-    @Override
-    public void setSpeed(double speed) {
-        this.speed = speed;
-    }
-
-    @Override
-    public void setDirection(double direction) {
-        this.direction = direction;
-    }
-
-    public void setRange(double range) {
-        this.range = range;
-    }
-
-    public void setVulnerable(boolean vulnerable) {
-        this.vulnerable = vulnerable;
-    }
-
-    public void inRange(boolean inRange) {
-        inDeflectRange = inRange;
-    }
-
-    // Mouse Listener
-
-    @Override
-    public void mouseClicked(MouseEvent e) {
-        // Not used
-    }
+    public void mouseClicked(MouseEvent e) {}
 
     @Override
     public void mousePressed(MouseEvent e) {
         mousePressed = true;
-        charge();
+        // charge();
     }
 
     @Override
@@ -118,16 +103,12 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
     }
 
     @Override
-    public void mouseEntered(MouseEvent e) {
-        // Not used
-    }
+    public void mouseEntered(MouseEvent e) {}
 
     @Override
-    public void mouseExited(MouseEvent e) {
-        // Not used
-    }
+    public void mouseExited(MouseEvent e) {}
 
-    // Key Listener
+
 
     @Override
     public void keyPressed(KeyEvent e) {
@@ -154,9 +135,7 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
     }
 
     @Override
-    public void keyTyped(KeyEvent e) {
-        // Not used
-    }
+    public void keyTyped(KeyEvent e) {}
 
     private void updateMovement() {
         if (!canMove) return;
@@ -186,18 +165,15 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
         }
     }
 
-    public void move() {
-        if (!isMoving) return;
-
-        double radians = Math.toRadians(direction);
-
-        this.x += Math.cos(radians) * this.speed;
-        this.y += Math.sin(radians) * this.speed;
-    }
-
+    @Override
     public boolean isColliding(GameEntity e) {
-        if (e.getType() == Type.BALL || e.getType() == Type.PLAYER) {
-            double r1 = this.size / 2;
+        EntityType type = e.getType();
+        
+        // Circle on Circle Collisions
+        if (type == EntityType.BALL || type == EntityType.PLAYER) {
+            if (type == EntityType.BALL && !vulnerable) return false;
+
+            double r1 = size / 2;
             double r2 = e.getW() / 2;
 
             double centerX1 = this.x + r1;
@@ -210,115 +186,125 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
             double distance = Math.sqrt(dx * dx + dy * dy);
             double minDist = r1 + r2;
 
-            if (e.getType() == Type.BALL && vulnerable) return distance < minDist;
-
-            if (e.getType() == Type.PLAYER) return distance < minDist;
+            return distance < minDist;
         }
 
         return false;
     }
 
-    public boolean inDeflectRange(Ball ball) {
-        if (!canDeflect && !inPostDeflect) return false;
-
+    public boolean isInRange(GameEntity e) {
         double x1, x2, y1, y2, dist, r1, r2;
 
         r1 = this.size / 2;
-        r2 = ball.getW() / 2;
+        r2 = e.getW() / 2;
 
         x1 = this.x + r1;
         y1 = this.y + r1;
-        x2 = ball.getX() + r2;
-        y2 = ball.getY() + r2;
+        x2 = e.getX() + r2;
+        y2 = e.getY() + r2;
 
         dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
         return dist < r1 + r2 + this.range;
     }
 
-    public void charge() {
-        Thread charge = new Thread(() -> {
-            int delay = 10;
+    public void deflectProcess(int interval, Ball ball) {
+        if (canDeflect) new DeflectProcess(interval, ball);
+    }
+
+    private class DeflectProcess {
+
+        private Ball ball;
+
+        public DeflectProcess(int interval, Ball ball) {
+            this.ball = ball;
+
+            new Charge(interval);
+        }
+
+        private void reset() {
             power = 0;
-            canLook = true;
-            isCharging = true;
-            playChargeAnim();
-            try {
-                while (mousePressed && power < 100) {
-                    power += 1;
-                    Thread.sleep(delay);
-                }
-            } catch(InterruptedException e) {
-                // System.out.println(e);
-            }
-            // canDeflect = false;
-            deflect();
-        });
-
-        if (!canDeflect) return;
-        chargeAction = new Thread(charge);
-        chargeAction.start();
-    }
-
-    public void deflect() {
-        Thread deflect = new Thread(() -> {
-            int delay = 10, iterations = 100;
-            canDeflect = false;
-            playDeflectAnim();
-            try {
-                for (int i = 0; i < iterations; i++) {
-                    if (ballDeflected) {
-                        ballDeflected = false;
-                        return;
-                    }
-                    Thread.sleep(delay);
-                }
-            } catch(InterruptedException e) {
-                // System.out.println(e);
-            }
-
-            vulnerable = true;
-            isCharging = false;
             canDeflect = true;
-            inPostDeflect = false;
-        });
-
-        if (!isCharging) return;
-        deflectAction = new Thread(deflect);
-        deflectAction.start();
-    }
-
-    public void ballDeflected() {
-        ballDeflected = true;
-        postDeflect();
-    }
-
-    public void postDeflect() {
-        Thread postDeflect = new Thread(() -> {
-            int delay = 10, iterations = 200;
-            canDeflect = false;
-            vulnerable = false;
-            inPostDeflect = true;
-            changeColor(new Color(200, 200, 200));
-            try {
-                for (int i = 0; i < iterations; i++) {
-                    if (!inDeflectRange || vulnerable) break;
-                    Thread.sleep(delay);
-                }
-            } catch(InterruptedException e) {
-                // System.out.println(e);
-            }
-            revertColor();
             vulnerable = true;
+
+            isDeflected = false;
             isCharging = false;
-            canDeflect = true;
-            inPostDeflect = false;
-        });
+            isDeflected = false;
+            isGraced = false;
 
-        postDeflectAction.interrupt();
-        postDeflectAction = new Thread(postDeflect);
-        postDeflectAction.start();
+            render.defaultColor();
+        }
+
+        private class Charge extends AsyncTask {
+            public Charge(int interval) {
+                super(interval);
+
+                render.playChargeAnim();
+                power = 0;
+                isCharging = true;
+                canDeflect = false;
+                
+                startTask();
+            }
+
+            @Override
+            protected void runnable() {
+                power++;
+                if (!mousePressed || power >= 100) {
+                    new Deflect(interval, 1);
+                    endTask();
+                }
+            }
+        }
+
+        private class Deflect extends AsyncTask {
+            public Deflect(int interval, double duration) {
+                super(interval, duration);
+
+                render.playDeflectAnim();
+                isCharging = false;
+
+                if (isInRange(ball)) {
+                    isDeflected = true;
+                    ball.redirectTowards(mX, mY);
+                    new Grace(interval, 2);
+                } else {
+                    startTask();
+                }
+            }
+
+            @Override
+            protected void runnable() {
+                // if (isDeflected)
+                // if (isInRange(ball)) {
+                //     isDeflected = true;
+                //     ball.redirectTowards(mX, mY);
+                //     new Grace(interval, 2);
+                //     endTask();
+                // }
+            }
+
+            @Override
+            protected void finish() { reset(); }
+        }
+
+        private class Grace extends AsyncTask {
+            public Grace(int interval, double duration) {
+                super(interval, duration);
+                render.changeColor(gracedColor);
+                isGraced = true;
+                vulnerable = false;
+
+                startTask();
+            }
+
+            @Override
+            protected void runnable() {
+                if (!isInRange(ball) || vulnerable) endTask();
+            }
+
+            @Override
+            protected void finish() { reset(); }
+        }
     }
-
-    
 
 }

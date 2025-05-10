@@ -21,20 +21,21 @@ import javax.swing.*;
 public class GameCanvas extends JComponent implements Runnable, MouseListener, MouseMotionListener {
     
     private int clientID, w, h;
-    private double mX = 0, mY = 0;
     private Ball ball;
-    private Player player, opp;
+    private Player player, opponent;
+    private double mX = 0, mY = 0;
 
     private ArrayList<GameEntity> ge = new ArrayList<GameEntity>();
 
-    private boolean ballDeflected = false;
+    private volatile boolean running = true;
+    private boolean isDeflected = false;
 
-    public GameCanvas (int w, int h, int clientID, Ball ball, Player player, Player opp) {
+    public GameCanvas (int w, int h, int clientID, Ball ball, Player player, Player opponent) {
         this.clientID = clientID;
 
         this.ball = ball;
         this.player = player;
-        this.opp = opp;
+        this.opponent = opponent;
 
         this.w = w;
         this.h = h;
@@ -57,10 +58,10 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
     }
 
     public void setUpGameEntities() {
-        player.rotateTo(opp.getX() + opp.getW()/2, opp.getY() + opp.getH()/2);
-        opp.rotateTo(player.getX() + player.getW()/2, player.getY() + player.getH()/2);
+        player.rotateTo(opponent.getX() + opponent.getW()/2, opponent.getY() + opponent.getH()/2);
+        opponent.rotateTo(player.getX() + player.getW()/2, player.getY() + player.getH()/2);
 
-        ge.add(opp);
+        ge.add(opponent);
         ge.add(player);
         ge.add(ball);
     }
@@ -71,28 +72,25 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
 
         addMouseListener(this);
         addMouseMotionListener(this);
+
         addKeyListener(player);
         addMouseListener(player);
     }
 
-    public boolean getBallDeflected() {
-        if (ballDeflected) {
-            ballDeflected = false;
+    public boolean isDeflected() {
+        if (isDeflected) {
+            isDeflected = false;
             return true;
         }
         return false;
-        // return ballDeflected;
     }
 
-    public double getMX() {
-        return this.mX;
-    }
+    public double getMX() { return this.mX; }
 
-    public double getMY() {
-        return this.mY;
-    }
+    public double getMY() { return this.mY; }
 
     public void updateMousePos(MouseEvent e) {
+        if (Math.abs(e.getX() - mX) <= 1 && Math.abs(e.getY() - mY) <= 1) return;
         this.mX = e.getX();
         this.mY = e.getY();
     }
@@ -111,9 +109,14 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
     //     // System.out.println(ballSpeed);
     // }
 
+    public void startGameLoop() { new Thread(this).start(); }
+    public void endGameLoop() { this.running = false; }
+
     @Override
     public void run() {
-        while (true) {
+        while (running) {
+            player.setMX(mX);
+            player.setMY(mY);
             player.rotateTo(mX, mY);
 
             for (GameEntity e : ge) {
@@ -136,9 +139,9 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
                     e.setY((eY < 0) ? 0 : h - eH);
                 }
 
-                if (player.isColliding(opp)) {
-                    double dx = player.getCenterX() - opp.getCenterX();
-                    double dy = player.getCenterY() - opp.getCenterY();
+                if (player.isColliding(opponent)) {
+                    double dx = player.getCenterX() - opponent.getCenterX();
+                    double dy = player.getCenterY() - opponent.getCenterY();
                     double distance = Math.sqrt(dx * dx + dy * dy);
 
                     if (distance == 0) {
@@ -148,7 +151,7 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
                         distance = 1;
                     }
 
-                    double overlap = (player.getSize() / 2 + opp.getSize() / 2) - distance;
+                    double overlap = (player.getSize() / 2 + opponent.getSize() / 2) - distance;
 
                     // Normalize
                     dx /= distance;
@@ -160,43 +163,40 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
 
                     player.setX(player.getX() + pushX);
                     player.setY(player.getY() + pushY);
-                    opp.setX(opp.getX() - pushX);
-                    opp.setY(opp.getY() - pushY);
+                    opponent.setX(opponent.getX() - pushX);
+                    opponent.setY(opponent.getY() - pushY);
                 }
 
-                // if (!opp.getVulnerable()) {
-                //     ball.setColor(Color.DARK_GRAY);
+                // if (opponent.isGraced()) {
+                //     ball.gracedColor();
                 //     continue;
                 // }
 
-                // if (opp.isColliding(ball)) {
-                //     ball.setColor(Color.RED);
-                //     continue;
-                // }
-
-                if (!player.getVulnerable()) {
-                    ball.setColor(Color.LIGHT_GRAY);
+                if (opponent.isColliding(ball)) {
+                    ball.hitColor();
                     continue;
                 }
 
-                if (player.isColliding(ball)) {
-                    ball.setColor(Color.BLUE);
+                if (player.isGraced()) {
+                    ball.gracedColor();
                     continue;
                 }
 
-                if (player.inDeflectRange(ball) && !player.isColliding(ball)) {
-                    ball.setColor(Color.GREEN);
+                if (e.isColliding(ball)) {
+                    ball.hitColor();
                     continue;
                 }
 
-                ball.setColor(Color.BLACK);
+                if (player.isInRange(ball) && !player.isColliding(ball)) {
+                    ball.isInRangeColor();
+                    continue;
+                }
+
+                ball.defaultColor();
                 
             }
 
-            player.move();
-            opp.move();
-
-            player.inRange(player.inDeflectRange(ball));
+            for (GameEntity e : ge) if (e != ball) e.update();
 
             this.repaint();
 
@@ -209,49 +209,33 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
     }
 
     @Override
-    public void mouseClicked(MouseEvent e) {
-        // 
-    }
+    public void mouseClicked(MouseEvent e) {}
 
     @Override
     public void mousePressed(MouseEvent e) {
-        // 
+        player.deflectProcess(10, ball);
     }
         
 
     @Override
     public void mouseReleased(MouseEvent e) {
-        if (player.inDeflectRange(ball) && player.getVulnerable()) {
-            ball.redirectTowards(mX, mY);
-            ballDeflected = true;
-            player.ballDeflected();
-        }
+        // if (player.inDeflectRange(ball) && player.getVulnerable()) {
+        //     ball.redirectTowards(mX, mY);
+        //     ballDeflected = true;
+        //     player.ballDeflected();
+        // }
     }
 
     @Override
-    public void mouseEntered(MouseEvent e) {
-        // 
-    }
+    public void mouseEntered(MouseEvent e) {}
 
     @Override
-    public void mouseExited(MouseEvent e) {
-        // 
-    }
+    public void mouseExited(MouseEvent e) {}
 
     @Override
-    public void mouseDragged(MouseEvent e) {
-        // only update if changed significantly
-        if (Math.abs(e.getX() - mX) > 1 || Math.abs(e.getY() - mY) > 1) {
-            updateMousePos(e);
-        }
-    }
+    public void mouseDragged(MouseEvent e) { updateMousePos(e); }
 
     @Override
-    public void mouseMoved(MouseEvent e) {
-        // only update if changed significantly
-        if (Math.abs(e.getX() - mX) > 1 || Math.abs(e.getY() - mY) > 1) {
-            updateMousePos(e);
-        }
-    }
+    public void mouseMoved(MouseEvent e) { updateMousePos(e); }
 
 }

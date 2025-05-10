@@ -1,59 +1,72 @@
 import java.awt.*;
 import java.util.Random;
 
-public class Ball extends Circle implements GameEntity, Runnable {
+public class Ball extends GameEntity implements Runnable {
 
-    private int w, h, delay;
-    private double speed, direction;
-    private boolean canMove = false, running = false;
+    // private int w, h, interval;
+    private int w, h, interval;
+    private double size, velocity, direction;
+    private boolean isMoving, isRunnable, running;
 
-    public Ball(int w, int h, int delay, double x, double y, double size, double speed) {
-        super(x, y, size, Color.BLACK);
+    private Circle render;
+    private Color currentColor;
+
+    private final static Color hitColor = new Color(153, 0, 153);
+    private final static Color gracedColor = new Color(200, 200, 200);
+    private final static Color inRangeColor = new Color(0, 255, 0);
+
+    public Ball(double x, double y, double size, double velocity, Color color) {
+        super(x, y, size, size, color);
         
-        this.w = w;
-        this.h = h;
-        this.delay = delay;
-        this.speed = speed;
+        this.size = size;
+        this.velocity = velocity;
         this.direction = new Random().nextInt(360);
 
-        this.canMove = false;
+        this.render = new Circle(x, y, size, color);
+        this.currentColor = color;
     }
 
-    // Get
-    public Type getType() {
-        return Type.BALL;
+    public Ball(double x, double y, double size, double velocity, Color color, int w, int h, int interval) {
+        super(x, y, size, size, color);
+        
+        this.size = size;
+        this.velocity = velocity;
+        this.direction = new Random().nextInt(360);
+
+        this.render = new Circle(x, y, size, color);
+        this.currentColor = color;
+
+        this.w = w;
+        this.h = h;
+        this.interval = interval;
+
+        this.isRunnable = true;
     }
 
-    public double getSpeed() {
-        return speed;
+    @Override
+	public void update() {
+        if (!this.active || !isMoving) return;
+
+		double radians = Math.toRadians(direction);
+
+        this.x += Math.cos(radians) * this.velocity;
+        this.y += Math.sin(radians) * this.velocity;
+	}
+
+	@Override
+	public void draw(Graphics2D g2d) { 
+        render.setX(this.x);
+        render.setY(this.y);
+        render.setW(this.size);
+        render.setH(this.size);
+        render.setColor(this.currentColor);
+        render.draw(g2d);
     }
 
-    public double getDirection() {
-        return direction;
-    }
+	@Override
+	public GameEntity.EntityType getType() { return EntityType.BALL; }
 
-    // Set
-    public void setSpeed(double speed) {
-        this.speed = speed;
-    }
-    
-    public void setDirection(double direction) {
-        this.direction = direction;
-    }
 
-    public void canMove(boolean state) {
-        this.canMove = state;
-    }
-
-    // Functional
-    public void move() {
-        if (!canMove) return;
-
-        double radians = Math.toRadians(direction);
-
-        this.x += Math.cos(radians) * this.speed;
-        this.y += Math.sin(radians) * this.speed;
-    }
 
     public void bounce(boolean vertical) {
         if (vertical) {
@@ -76,30 +89,44 @@ public class Ball extends Circle implements GameEntity, Runnable {
         if (direction < 0) direction += 360;
     }
 
-    public boolean isColliding(GameEntity s) {
+    public boolean isColliding(GameEntity e) {
+        EntityType type = e.getType();
+        // Circle on Circle Collisions
+        if (type == EntityType.BALL || type == EntityType.PLAYER) {
+            double r1 = size / 2;
+            double r2 = e.getW() / 2;
 
-        if (s.getType() == Type.PLAYER) {
-            double x1, x2, y1, y2, dist, r1, r2;
+            double centerX1 = this.x + r1;
+            double centerY1 = this.y + r1;
+            double centerX2 = e.getX() + r2;
+            double centerY2 = e.getY() + r2;
 
-            r1 = this.size/2;
-            r2 = s.getW()/2;
+            double dx = centerX2 - centerX1;
+            double dy = centerY2 - centerY1;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+            double minDist = r1 + r2;
 
-            x1 = this.x + r1;
-            y1 = this.y + r1;
-            x2 = s.getX() + r2;
-            y2 = s.getY() + r2;
-
-            dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-
-            // System.out.printf("%f : %f\n", dist, r1 + r2);
-
-            return dist < r1 + r2;
+            return distance < minDist;
         }
 
         return false;
     }
 
+    public void changeColor(Color color) { currentColor = color; }
+
+    public void defaultColor() { currentColor = this.color; }
+
+    public void isInRangeColor() { currentColor = inRangeColor; }
+
+    public void gracedColor() { currentColor = gracedColor; }
+
+    public void hitColor() { currentColor = hitColor; }
+
+
+
     public void startRunnable() {
+        if (!isRunnable) return;
+        isMoving = true;
         running = true;
         Thread t = new Thread(this);
         t.start();
@@ -107,24 +134,23 @@ public class Ball extends Circle implements GameEntity, Runnable {
 
     @Override
     public void run() {
-        canMove(true);
         while (running) {
+            if (x < 0 || x + size > w) {
+                bounce(true);
+                setX((x < 0) ? 0 : w - size);
+            }
+
+            if (y < 0 || y + size > h) {
+                bounce(false);
+                setY((y < 0) ? 0 : h - size);
+            }
+
+            update();
+
             try {
-                if (x < 0 || x + size > w) {
-                    bounce(true);
-                    setX((x < 0) ? 0 : w - size);
-                }
-
-                if (y < 0 || y + size > h) {
-                    bounce(false);
-                    setY((y < 0) ? 0 : h - size);
-                }
-
-                move();
-
-                Thread.sleep(delay);
+                Thread.sleep(interval);
             } catch (Exception e) {
-            // ...
+                // ...
             }
         }
     }
