@@ -92,7 +92,6 @@ public class GameServer {
             System.out.println("Failed to set up connection.");
         }
 
-        
     }
 
     private void runThreads() {

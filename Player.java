@@ -4,9 +4,11 @@ import java.awt.event.*;
 public class Player extends PlayerDrawable implements GameEntity, MouseListener, KeyListener {
     
     private int lives;
-    private double speed, direction, range;
-    private boolean canMove, canSwing, canDash, vulnerable;
+    private double speed, direction, range, power;
+    private boolean canMove, canDeflect, canDash, vulnerable;
     private boolean isMoving, upPressed, downPressed, leftPressed, rightPressed;
+    private boolean mousePressed, isCharging, ballDeflected, inPostDeflect, inDeflectRange;
+    private Thread chargeAction, deflectAction, postDeflectAction;
 
     public Player(double x, double y, double size, double range, Color color) {
         super(x, y, size, color);
@@ -15,9 +17,10 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
         this.speed = 5;
         this.direction = 0;
         this.range = range;
+        this.power = 0;
 
         this.canMove = true;
-        this.canSwing = true;
+        this.canDeflect = true;
         this.canDash = true;
         this.vulnerable = true;
 
@@ -27,6 +30,15 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
         this.leftPressed = false;
         this.rightPressed = false;
 
+        this.mousePressed = false;
+        this.isCharging = false;
+        this.ballDeflected = false;
+        this.inPostDeflect = false;
+        this.inDeflectRange = false;
+
+        this.chargeAction = new Thread();
+        this.deflectAction = new Thread();
+        this.postDeflectAction = new Thread();
     }
 
     @Override
@@ -52,12 +64,16 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
         return this.x + (this.size / 2);
     }
 
-        public double getCenterY() {
-            return this.y + (this.size / 2);
-        }
+    public double getCenterY() {
+        return this.y + (this.size / 2);
+    }
 
-        public double getSize() {
-            return this.size;
+    public double getSize() {
+        return this.size;
+    }
+
+    public boolean getVulnerable() {
+        return vulnerable;
     }
 
     @Override
@@ -74,6 +90,14 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
         this.range = range;
     }
 
+    public void setVulnerable(boolean vulnerable) {
+        this.vulnerable = vulnerable;
+    }
+
+    public void inRange(boolean inRange) {
+        inDeflectRange = inRange;
+    }
+
     // Mouse Listener
 
     @Override
@@ -83,14 +107,14 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
 
     @Override
     public void mousePressed(MouseEvent e) {
-        // Not used
-        playChargeAnim();
+        mousePressed = true;
+        charge();
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
-        canLook = false;
-        playSwingAnim();
+        mousePressed = false;
+        // deflect();
     }
 
     @Override
@@ -162,7 +186,6 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
         }
     }
 
-    @Override
     public void move() {
         if (!isMoving) return;
 
@@ -172,7 +195,6 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
         this.y += Math.sin(radians) * this.speed;
     }
 
-    @Override
     public boolean isColliding(GameEntity e) {
         if (e.getType() == Type.BALL || e.getType() == Type.PLAYER) {
             double r1 = this.size / 2;
@@ -196,8 +218,8 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
         return false;
     }
 
-    public boolean inSwingRange(Ball ball) {
-        if (!canSwing) return false;
+    public boolean inDeflectRange(Ball ball) {
+        if (!canDeflect && !inPostDeflect) return false;
 
         double x1, x2, y1, y2, dist, r1, r2;
 
@@ -212,5 +234,91 @@ public class Player extends PlayerDrawable implements GameEntity, MouseListener,
         dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
         return dist < r1 + r2 + this.range;
     }
+
+    public void charge() {
+        Thread charge = new Thread(() -> {
+            int delay = 10;
+            power = 0;
+            canLook = true;
+            isCharging = true;
+            playChargeAnim();
+            try {
+                while (mousePressed && power < 100) {
+                    power += 1;
+                    Thread.sleep(delay);
+                }
+            } catch(InterruptedException e) {
+                // System.out.println(e);
+            }
+            // canDeflect = false;
+            deflect();
+        });
+
+        if (!canDeflect) return;
+        chargeAction = new Thread(charge);
+        chargeAction.start();
+    }
+
+    public void deflect() {
+        Thread deflect = new Thread(() -> {
+            int delay = 10, iterations = 100;
+            canDeflect = false;
+            playDeflectAnim();
+            try {
+                for (int i = 0; i < iterations; i++) {
+                    if (ballDeflected) {
+                        ballDeflected = false;
+                        return;
+                    }
+                    Thread.sleep(delay);
+                }
+            } catch(InterruptedException e) {
+                // System.out.println(e);
+            }
+
+            vulnerable = true;
+            isCharging = false;
+            canDeflect = true;
+            inPostDeflect = false;
+        });
+
+        if (!isCharging) return;
+        deflectAction = new Thread(deflect);
+        deflectAction.start();
+    }
+
+    public void ballDeflected() {
+        ballDeflected = true;
+        postDeflect();
+    }
+
+    public void postDeflect() {
+        Thread postDeflect = new Thread(() -> {
+            int delay = 10, iterations = 200;
+            canDeflect = false;
+            vulnerable = false;
+            inPostDeflect = true;
+            changeColor(new Color(200, 200, 200));
+            try {
+                for (int i = 0; i < iterations; i++) {
+                    if (!inDeflectRange || vulnerable) break;
+                    Thread.sleep(delay);
+                }
+            } catch(InterruptedException e) {
+                // System.out.println(e);
+            }
+            revertColor();
+            vulnerable = true;
+            isCharging = false;
+            canDeflect = true;
+            inPostDeflect = false;
+        });
+
+        postDeflectAction.interrupt();
+        postDeflectAction = new Thread(postDeflect);
+        postDeflectAction.start();
+    }
+
+    
 
 }

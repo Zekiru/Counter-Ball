@@ -50,21 +50,7 @@ public class GameFrame {
         t.start();
     }
 
-    // public boolean getBallDeflected() {
-    //     if (gc == null) return false;
-    //     return gc.getBallDeflected();
-    // }
-
-    // public double getMX() {
-    //     if (gc == null) return 0;
-    //     return gc.getMX();
-    // }
-
-    // public double getMY() {
-    //     if (gc == null) return 0;
-    //     return gc.getMY();
-    // }
-    
+    // /*
     public static void main(String[] args) {
         int client = 1, w = 1024, h = 768;
         Ball ball = new Ball(
@@ -76,7 +62,7 @@ public class GameFrame {
             120,
             10
         );
-        ball.setSpeed(10);
+        ball.setSpeed(12);
         ball.canMove(true);
 
         GameCanvas gc = new GameCanvas(
@@ -94,4 +80,5 @@ public class GameFrame {
         ball.startRunnable();
         gf.setUpGUI();
     }
+    // */
 }

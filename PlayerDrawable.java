@@ -20,8 +20,8 @@ import java.awt.*;
 public class PlayerDrawable implements Drawable {
     
     protected double x, y, r, r2, rX, rY, size;
-    protected Color color;
-    protected Thread thread;
+    protected Color color, currentColor;
+    protected Thread animation;
     protected boolean canLook;
 
     public PlayerDrawable(double x, double y, double size, Color color) {
@@ -29,6 +29,7 @@ public class PlayerDrawable implements Drawable {
         this.y = y;
         this.size = size;
         this.color = color;
+        this.currentColor = color;
 
         this.r = 0;
         this.r2 = 0;
@@ -37,33 +38,31 @@ public class PlayerDrawable implements Drawable {
 
         this.canLook = true;
 
-        this.thread = new Thread();
+        this.animation = new Thread();
 
     }
 
     public void draw(Graphics2D g2d) {
-        double angleBat, angleHandL, angleHandR, batW, batH, handSize, batOffsetX, batOffsetY, handOffsetX, handOffsetY, rX, rY;
+        double angleBat = 90;
+        double angleHandL = 85;
+        double angleHandR = 95;
 
-        angleBat = 90;
-        angleHandL = 85;
-        angleHandR = 95;
+        double batW = size*0.3;
+        double batH = size*1.5;
+        double handSize = size*0.5;
 
-        batW = size*0.3;
-        batH = size*1.5;
-        handSize = size*0.5;
+        double handOffsetX = x + size*1.04;
+        double handOffsetY = y + (size - handSize) / 2;
+        double batOffsetX = handOffsetX + (handSize - batW) / 2;
+        double batOffsetY = handOffsetY + size/20;
 
-        handOffsetX = x + size*1.04;
-        handOffsetY = y + (size - handSize) / 2;
-        batOffsetX = handOffsetX + (handSize - batW) / 2;
-        batOffsetY = handOffsetY + size/20;
+        double rX = x + size/2;
+        double rY = y + size/2;
 
-        rX = x + size/2;
-        rY = y + size/2;
-
-        Rectangle bat = new Rectangle(batOffsetX, batOffsetY, batW, batH, color);
-        Circle handL = new Circle(handOffsetX, handOffsetY, handSize, color);
-        Circle handR = new Circle(handOffsetX, handOffsetY, handSize, color);
-        Circle body = new Circle(x, y, size, color);
+        Rectangle bat = new Rectangle(batOffsetX, batOffsetY, batW, batH, currentColor);
+        Circle handL = new Circle(handOffsetX, handOffsetY, handSize, currentColor);
+        Circle handR = new Circle(handOffsetX, handOffsetY, handSize, currentColor);
+        Circle body = new Circle(x, y, size, currentColor);
 
         bat.setRotation(r + angleBat, rX, rY);
         handL.setRotation(r + angleHandL, rX, rY);   
@@ -76,68 +75,52 @@ public class PlayerDrawable implements Drawable {
 
     }
 
-    protected void playSwingAnim() {
-        // System.out.println("SWING");
+    protected void animInterrupt() {
+        animation.interrupt();
+        animation = new Thread();
+        r2 = 0;
+    }
 
+    protected void playDeflectAnim() {
+        r2 = 0;
         Thread swingAnim = new Thread(() -> {
-            int delay, iterations;
-
-            delay = 1;
-            iterations = 90;
-
+            int delay = 10, iterations = 10;
             canLook = false;
-
             try {
                 for (int i = 0; i < iterations; i++) {
                     setRotation(getRotation() - 360/iterations);
-                    if (i == iterations - 1) canLook = true;
                     Thread.sleep(delay);
                 }
-            } catch(InterruptedException ex) {
-                // ...
-                canLook = true;
+            } catch(InterruptedException e) {
+                // System.out.println(e);
             }
+            canLook = true;
         });
 
-        r2 = 0;
-        thread.interrupt();
-        thread = new Thread(swingAnim);
-        thread.start();
+        animation.interrupt();
+        animation = new Thread(swingAnim);
+        animation.start();
     }
 
-    public void playChargeAnim() {
-        // System.out.println("CHARGE");
-
+    protected void playChargeAnim() {
         Thread chargeAnim = new Thread(() -> {
-            int delay, iterations;
-            double current, target;
-
-            delay = 1;
-            iterations = 180;
-
-            current = 0;
-            target = 70;
-
-            // canLook = false;
+            int delay = 10, iterations = 20;
+            double current = 0, target = 70;
 
             try {
                 for (int i = 0; i < iterations; i++) {
                     if (current < target) current += (double) 60/iterations;
                     r2 = current;
-                    // System.out.println(r2);
-                    // if (i == iterations - 1) canLook = true;
                     Thread.sleep(delay);
-                    // if (i == iterations - 1) r2 = 0;
                 }
-            } catch(InterruptedException ex) {
-                // ...
-                r2 = 0;
+            } catch(InterruptedException e) {
+                // System.out.println(e);
             }
         });
 
-        thread.interrupt();
-        thread = new Thread(chargeAnim);
-        thread.start();
+        animation.interrupt();
+        animation = new Thread(chargeAnim);
+        animation.start();
     }
 
     protected void rotateTo(double x, double y) {
@@ -153,7 +136,14 @@ public class PlayerDrawable implements Drawable {
         if (angle < 0) angle += 360;
     
         this.setRotation(angle);
-        // this.setDirection(angle);    // for movement direction, optional
+    }
+
+    protected void changeColor(Color color) {
+        currentColor = color;
+    }
+
+    protected void revertColor() {
+        currentColor = color;
     }
 
     // Get
