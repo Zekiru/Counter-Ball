@@ -47,7 +47,13 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     public boolean isVulnerable() { return vulnerable; }
     public boolean isMoving() { return isMoving; }
     public boolean isCharging() { return isCharging; }
-    public boolean isDeflected() { return isDeflected; }
+    public boolean isDeflected() {
+        if (isDeflected) {
+            isDeflected = false;
+            return true;
+        }
+        return false; 
+    }
     public boolean isGraced() { return isGraced; }
     public boolean isHit() { return isHit; }
 
@@ -226,9 +232,8 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
             canDeflect = true;
             vulnerable = true;
 
-            isDeflected = false;
+            // isDeflected = false;
             isCharging = false;
-            isDeflected = false;
             isGraced = false;
 
             render.defaultColor();
@@ -263,7 +268,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
                 render.playDeflectAnim();
                 isCharging = false;
 
-                if (isInRange(ball)) {
+                if (isInRange(ball) && vulnerable) {
                     isDeflected = true;
                     ball.redirectTowards(mX, mY);
                     new Grace(interval, 2);

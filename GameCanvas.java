@@ -196,6 +196,8 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
                 
             }
 
+            if (player.isDeflected()) this.isDeflected = true;
+
             for (GameEntity e : ge) if (e != ball) e.update();
 
             this.repaint();
@@ -212,19 +214,10 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
     public void mouseClicked(MouseEvent e) {}
 
     @Override
-    public void mousePressed(MouseEvent e) {
-        player.deflectProcess(10, ball);
-    }
+    public void mousePressed(MouseEvent e) { player.deflectProcess(10, ball); }
         
-
     @Override
-    public void mouseReleased(MouseEvent e) {
-        // if (player.inDeflectRange(ball) && player.getVulnerable()) {
-        //     ball.redirectTowards(mX, mY);
-        //     ballDeflected = true;
-        //     player.ballDeflected();
-        // }
-    }
+    public void mouseReleased(MouseEvent e) {}
 
     @Override
     public void mouseEntered(MouseEvent e) {}
