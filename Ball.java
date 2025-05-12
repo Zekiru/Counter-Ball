@@ -1,51 +1,36 @@
 import java.awt.*;
 import java.util.Random;
 
-public class Ball extends GameEntity implements Runnable {
+public class Ball extends GameEntity {
 
-    // private int w, h, interval;
-    private int w, h, interval;
-    private double size, velocity, direction;
-    private boolean isMoving, isRunnable, running;
+    private int delta = 1;
+    private double size, velocity, initialVelocity, direction;
 
     private Circle render;
     private Color currentColor;
 
-    private final static Color hitColor = new Color(153, 0, 153);
+    private final static Color hitColor = Color.BLACK;
     private final static Color gracedColor = new Color(200, 200, 200);
-    private final static Color inRangeColor = new Color(0, 255, 0);
+    private final static Color inRangeColor = Color.GREEN;
 
     public Ball(double x, double y, double size, double velocity, Color color) {
         super(x, y, size, size, color);
         
         this.size = size;
         this.velocity = velocity;
+        this.initialVelocity = velocity;
         this.direction = new Random().nextInt(360);
 
         this.render = new Circle(x, y, size, color);
         this.currentColor = color;
     }
 
-    public Ball(double x, double y, double size, double velocity, Color color, int w, int h, int interval) {
-        super(x, y, size, size, color);
-        
-        this.size = size;
-        this.velocity = velocity;
-        this.direction = new Random().nextInt(360);
-
-        this.render = new Circle(x, y, size, color);
-        this.currentColor = color;
-
-        this.w = w;
-        this.h = h;
-        this.interval = interval;
-
-        this.isRunnable = true;
-    }
+    public double getVelocity() {return this.velocity; }
+    public void setVelocity(double velocity) { this.velocity = velocity; }
 
     @Override
 	public void update() {
-        if (!this.active || !isMoving) return;
+        if (!this.active) return;
 
 		double radians = Math.toRadians(direction);
 
@@ -122,37 +107,40 @@ public class Ball extends GameEntity implements Runnable {
 
     public void hitColor() { currentColor = hitColor; }
 
-
-
-    public void startRunnable() {
-        if (!isRunnable) return;
-        isMoving = true;
-        running = true;
-        Thread t = new Thread(this);
-        t.start();
+    public void updateBallVelocity() {
+        
     }
 
-    @Override
-    public void run() {
-        while (running) {
-            if (x < 0 || x + size > w) {
-                bounce(true);
-                setX((x < 0) ? 0 : w - size);
-            }
+    public void resetBallVelocity() {
+        velocity = initialVelocity;
+        delta = 1;
+    }
 
-            if (y < 0 || y + size > h) {
-                bounce(false);
-                setY((y < 0) ? 0 : h - size);
-            }
+    public void run(int w, int h) {
+        AsyncTask r = new AsyncTask(10) {
+            @Override
+            protected void runnable() {
+                if (velocity < 17) {
+                    velocity += 0.003;
+                } else {
+                    velocity = 15 + Math.log(delta) / 4;
+                    delta++;
+                }
 
-            update();
+                if (x < 0 || x + size > w) {
+                    bounce(true);
+                    setX((x < 0) ? 0 : w - size);
+                }
 
-            try {
-                Thread.sleep(interval);
-            } catch (Exception e) {
-                // ...
+                if (y < 0 || y + size > h) {
+                    bounce(false);
+                    setY((y < 0) ? 0 : h - size);
+                }
+
+                update();
             }
-        }
+        };
+        r.startTask();
     }
 
 }

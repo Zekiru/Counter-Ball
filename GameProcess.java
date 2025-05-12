@@ -1,9 +1,7 @@
 import java.awt.*;
-import java.awt.event.*;
 import java.util.*;
 
-public class GameProcess 
-implements Runnable, MouseListener, MouseMotionListener {
+public class GameProcess extends AsyncTask {
 
     /* 
 
@@ -14,35 +12,22 @@ implements Runnable, MouseListener, MouseMotionListener {
 
     */
 
-    private int w, h, delay;
-
+    private int w, h;
     private Player p1, p2;
     private Ball ball;
-    // private GameCanvas gc;
+    private GameCanvas gc;
     private ArrayList<GameEntity> ge;
 
-    private double mX = 0, mY = 0;
-
-    private Color contactColor = new Color(153, 0, 153);
-    private Color graceColor = new Color(200, 200, 200);
-
-    private boolean running = false, listenersRunning = false;
-
-    private boolean canDash = true, isDashing = false;
-    private boolean canCharge = true, canDeflect = false;
-    private boolean isCharging = false, isDeflected = false;
-    private boolean inCooldown = false, inGrace = false;
-    private boolean inContact = false, inRecovery = false;
-
     // Client Constructor:
-    public GameProcess(Player p1, Player p2, Ball ball, int w, int h, int delay) {
-        this.w = w;
-        this.h = h;
-        this.delay = delay;
-        this.p1 = p1;
-        this.p2 = p2;
-        this.ball = ball;
-        // this.gc = gc;
+    public GameProcess(int interval, GameCanvas gc) {
+        super(interval);
+        this.gc = gc;
+
+        this.w = gc.getW();
+        this.h = gc.getH();
+        this.p1 = gc.getPlayer();
+        this.p2 = gc.getOpponent();
+        this.ball = gc.getBall();
 
         this.ge = new ArrayList<GameEntity>();
 
@@ -50,153 +35,112 @@ implements Runnable, MouseListener, MouseMotionListener {
         ge.add(this.p1);
         ge.add(this.ball);
 
-    }
-
-    // Server Constructor:
-    // public GameProcess(int delay, Ball ball) {
-    //     this.delay = delay;
-    //     this.ball = ball;
-
-    //     this.ge = new ArrayList<GameEntity>();
-
-    //     ge.add(this.ball);
-
-    // }
-
-    public void setUpListeners() {
-        // gc.addMouseListener(this);
-        // gc.addMouseMotionListener(this);
-
-        // gc.addKeyListener(player);
-
-        // gc.setFocusable(true);
-        // gc.requestFocusInWindow();
-
-        this.listenersRunning = true;
-    }
-
-    private void updateMousePosition(MouseEvent e) {
-        if (Math.abs(e.getX() - mX) < 1) return;
-        if (Math.abs(e.getY() - mY) < 1) return;
-
-        this.mX = e.getX();
-        this.mY = e.getY();
-    }
-
-    public void playerCharge(Player player) {
-        if (!canCharge) return;
-
-        canCharge = false;
-        canDeflect = true;
-        // player.playChargeAnim();
-    }
-
-    private void playerDeflect(Player player) {
-        if (!canDeflect) return;
-
-        // player.playDeflectAnim();
-    }
-
-    private void playerGrace(Player player) {
-        
-
-        // player.changeColor(graceColor);
-    }
-
-    private void playerContact(Player player) {
-
-        // player.changeColor(contactColor);
-    }
-
-    private void ballDeflect() {
-        ball.redirectTowards(mX, mY);
+        startTask();
     }
 
     // Execute Processes:
     @Override
-    public void run() {
-        while (true) {
-            // double bX = ball.getX(), bY = ball.getY(), bSize = ball.getW();
-            // double pX = player.getX(), pY = player.getY(), pSize = player.getW();
+    public void runnable() {
 
-            // if (listenersRunning) p1.rotateTo(mX, mY);
-
-            handleBorderCollision();
-
-
-
-            try {
-                Thread.sleep(delay);
-            } catch (InterruptedException e) {
-                // TODO: handle exception
-            }
-        }
-    }
-
-    private void handleBorderCollision() {
-        for (GameEntity e : ge) {
-            double eX, eY, eW, eH, w, h;
-
-            eX = e.getX();
-            eY = e.getY();
-            eW = e.getW();
-            eH = e.getH();
-
-            // w = gc.getW();
-            // h = gc.getH();
-
-            // if (eX < 0 || eX + eW > w) {
-            //     if (e == ball) ball.bounce(true);
-            //     e.setX((eX < 0) ? 0 : w - eW);
-            // }
-    
-            // if (eY < 0 || eY + eH > h) {
-            //     if (e == ball) ball.bounce(false);
-            //     e.setY((eY < 0) ? 0 : h - eH);
-            // }
-        }
-    }
-
-    private void handleEntityCollision() {
+        gc.run();
         
+        // GameEntity.EntityType p = GameEntity.EntityType.PLAYER;
+        // GameEntity.EntityType b = GameEntity.EntityType.PLAYER;
+
+        // for (GameEntity e : ge) {
+
+            // GameEntity.EntityType et1 = e1.getType();
+
+            // handleBordersCollision(e);
+
+            // for (GameEntity e2 : ge) {
+
+            //     if (e1 == e2) continue;
+
+            //     GameEntity.EntityType et2 = e2.getType();
+
+            //     boolean bothPlayers = et1 == p && et2 == p;
+
+
+            //     if (bothPlayers) handlePlayersCollision((Player) e1, (Player) e2);
+
+            //     // if (playerBall) handlePlayerBallCollision(e1, e2);
+
+            //     // if (ballPlayer) handlePlayerBallCollision(e2, e1);
+            // }
+        // }
+
+        // handlePlayersCollision(p1, p2);
+
+        // handlePlayerBallCollision(p1);
+        // handlePlayerBallCollision(p2);
+
+        // for (GameEntity e : ge) e.update();
+
+        // System.out.printf("Ball(%f, %f)\n", this.ball.getX(), this.ball.getY());
+
+        // gc.repaint();
     }
 
-    // Mouse Listener
+    private void handleBordersCollision(GameEntity e) {
+        double eX, eY, eW, eH;
 
-    @Override
-    public void mouseClicked(MouseEvent e) {
-        // Not used
+        eX = e.getX();
+        eY = e.getY();
+        eW = e.getW();
+        eH = e.getH();
+
+        if (eX < 0 || eX + eW > w) {
+            if (e == ball) ball.bounce(true);
+            e.setX((eX < 0) ? 0 : w - eW);
+        }
+
+        if (eY < 0 || eY + eH > h) {
+            if (e == ball) ball.bounce(false);
+            e.setY((eY < 0) ? 0 : h - eH);
+        }
     }
 
-    @Override
-    public void mousePressed(MouseEvent e) {
-        // mousePressed = true;
-        // charge();
+    private void handlePlayersCollision(Player p1, Player p2) {
+
+        double dx = p1.getCenterX() - p2.getCenterX();
+        double dy = p1.getCenterY() - p2.getCenterY();
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance == 0) {
+            // Prevent divide-by-zero (players perfectly overlapping)
+            dx = 1;
+            dy = 0;
+            distance = 1;
+        }
+
+        double overlap = (p1.getSize() / 2 + p2.getSize() / 2) - distance;
+
+        // Normalize
+        dx /= distance;
+        dy /= distance;
+
+        // Push each player away from each other by half the overlap
+        double pushX = dx * (overlap / 2);
+        double pushY = dy * (overlap / 2);
+
+        p1.setX(p1.getX() + pushX);
+        p1.setY(p1.getY() + pushY);
+        p2.setX(p2.getX() - pushX);
+        p2.setY(p2.getY() - pushY);
+
     }
 
-    @Override
-    public void mouseReleased(MouseEvent e) {
-        // mousePressed = false;
-        // deflect();
+    private void handlePlayerBallCollision(Player p) {
+
+        if (p.isColliding(ball)) {
+            p.hurt(ball);
+        } else if (p.isInRange(ball)) {
+            ball.isInRangeColor();
+        } else {
+            ball.defaultColor();
+        }
+
     }
 
-    @Override
-    public void mouseEntered(MouseEvent e) {
-        // Not used
-    }
-
-    @Override
-    public void mouseExited(MouseEvent e) {
-        // Not used
-    }
-
-    @Override
-    public void mouseDragged(MouseEvent e) {
-        updateMousePosition(e);
-    }
-
-    @Override
-    public void mouseMoved(MouseEvent e) {
-        updateMousePosition(e);
-    }
 }

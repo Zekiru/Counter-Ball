@@ -18,6 +18,8 @@ import java.awt.event.*;
 import java.util.ArrayList;
 import javax.swing.*;
 
+// import GameEntity.EntityType;
+
 public class GameCanvas extends JComponent implements Runnable, MouseListener, MouseMotionListener {
     
     private int clientID, w, h;
@@ -29,20 +31,28 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
 
     private volatile boolean running = true;
     private boolean isDeflected = false;
+    private double initialV = 5;
+    private int delta = 1;
 
     public GameCanvas (int w, int h, int clientID, Ball ball, Player player, Player opponent) {
         this.clientID = clientID;
+
+        this.w = w;
+        this.h = h;
 
         this.ball = ball;
         this.player = player;
         this.opponent = opponent;
 
-        this.w = w;
-        this.h = h;
-
         this.setPreferredSize(new Dimension(w, h));
 
     }
+
+    public int getW() { return this.w; }
+    public int getH() { return this.h; }
+    public Player getPlayer() { return this.player; }
+    public Player getOpponent() { return this.opponent; }
+    public Ball getBall() { return this.ball; }
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -95,26 +105,14 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
         this.mY = e.getY();
     }
 
-    // public void updateBallSpeed() {
-    //     if (ballSpeed < 17) {
-    //         ballSpeed += 0.003;
-    //     } else {
-    //         ballSpeed = 15 + Math.log(ballTickCount) / 4;
-            
-    //     }
-        
-    //     ballTickCount++;
-    //     ball.setSpeed(ballSpeed);
-
-    //     // System.out.println(ballSpeed);
-    // }
-
     public void startGameLoop() { new Thread(this).start(); }
+    // public void startGameLoop() { new GameProcess(10, this); }
     public void endGameLoop() { this.running = false; }
 
     @Override
     public void run() {
         while (running) {
+
             player.setMX(mX);
             player.setMY(mY);
             player.rotateTo(mX, mY);
@@ -130,12 +128,12 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
                 if (e == ball) continue;
 
                 if (eX < 0 || eX + eW > this.w) {
-                    // if (e == ball) ball.bounce(true);
+                    if (e == ball) ball.bounce(true);
                     e.setX((eX < 0) ? 0 : w - eW);
                 }
         
                 if (eY < 0 || eY + eH > this.h) {
-                    // if (e == ball) ball.bounce(false);
+                    if (e == ball) ball.bounce(false);
                     e.setY((eY < 0) ? 0 : h - eH);
                 }
 
@@ -182,12 +180,14 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
                     continue;
                 }
 
-                if (e.isColliding(ball)) {
+                if (player.isColliding(ball) && player.isVulnerable()) {
+                    player.hurt(ball);
                     ball.hitColor();
+                    // System.out.println(player.getLives());
                     continue;
                 }
 
-                if (player.isInRange(ball) && !player.isColliding(ball)) {
+                if (player.isInRange(ball) && player.isVulnerable()) {
                     ball.isInRangeColor();
                     continue;
                 }

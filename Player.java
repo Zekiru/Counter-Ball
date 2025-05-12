@@ -14,7 +14,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
 
     private PlayerRender render;
 
-    private final static Color hitColor = new Color(153, 0, 153);
+    private final static Color hitColor = Color.BLACK;
     private final static Color gracedColor = new Color(200, 200, 200);
 
     public Player(int clientID, double x, double y, double size, double velocity, double range, Color color, int lives) {
@@ -47,6 +47,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     public boolean isVulnerable() { return vulnerable; }
     public boolean isMoving() { return isMoving; }
     public boolean isCharging() { return isCharging; }
+    
     public boolean isDeflected() {
         if (isDeflected) {
             isDeflected = false;
@@ -54,6 +55,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         }
         return false; 
     }
+
     public boolean isGraced() { return isGraced; }
     public boolean isHit() { return isHit; }
 
@@ -199,6 +201,8 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     }
 
     public boolean isInRange(GameEntity e) {
+        // if (!canDeflect || !vulnerable) return false;
+
         double x1, x2, y1, y2, dist, r1, r2;
 
         r1 = this.size / 2;
@@ -213,103 +217,187 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         return dist < r1 + r2 + this.range;
     }
 
-    public void deflectProcess(int interval, Ball ball) {
-        if (canDeflect) new DeflectProcess(interval, ball);
+    public void deflectProcess(int interval, Ball ball) { if (canDeflect) new Charge(interval, ball); }
+
+    public void disableDeflect() {
+        power = 0;
+        canDeflect = false;
     }
 
-    private class DeflectProcess {
+    public void revertStates() {
+        power = 0;
+        canDeflect = true;
+        vulnerable = true;
+
+        isCharging = false;
+        isGraced = false;
+
+        isHit = false;
+
+        render.defaultColor();
+    }
+
+    private class Charge extends AsyncTask {
 
         private Ball ball;
 
-        public DeflectProcess(int interval, Ball ball) {
+        public Charge(int interval, Ball ball) {
+            super(interval);
+
             this.ball = ball;
 
-            new Charge(interval);
+            render.playChargeAnim(0.4);
+            isCharging = true;
+            disableDeflect();
+            
+            startTask();
         }
 
-        private void reset() {
-            power = 0;
-            canDeflect = true;
-            vulnerable = true;
+        @Override
+        protected void runnable() {
+            power++;
+            if (!mousePressed || power >= 100) {
+                new Deflect(interval, 0.12, ball);
+                endTask();
+            }
+        }
+    }
 
-            // isDeflected = false;
+    private class Deflect extends AsyncTask {
+
+        private Ball ball;
+        private boolean safe = false;
+
+        public Deflect(int interval, double duration, Ball ball) {
+            super(interval, duration);
+
+            this.ball = ball;
+
+            render.playDeflectAnim(duration);
             isCharging = false;
+            disableDeflect();
+
+            startTask();
+        }
+
+        @Override
+        protected void runnable() {
+            // if (isHit || isGraced || !canDeflect) { endTask(); revertStates(); return; }
+            if (isInRange(ball) && vulnerable) {
+                isDeflected = true;
+                safe = true;
+                ball.redirectTowards(mX, mY);
+                new Grace(interval, 1, ball);
+                endTask();
+            }
+        }
+
+        @Override
+        protected void finish() { if (!safe) new DeflectCooldown(interval, 1); }
+    }
+
+    private class DeflectCooldown extends AsyncTask {
+
+        public DeflectCooldown(int interval, double duration) {
+            super(interval, duration);
+
+            // render.playDeflectAnim();
+            disableDeflect();
+            isCharging = false;
+
+            startTask();
+        }
+
+        @Override
+        protected void runnable() {}
+
+        @Override
+        protected void finish() { revertStates(); }
+    }
+
+    private class Grace extends AsyncTask {
+
+        private Ball ball;
+
+        public Grace(int interval, double duration, Ball ball) {
+            super(interval, duration);
+
+            this.ball = ball;
+
+            inState();
+
+            startTask();
+        }
+
+        private void inState() {
+            render.changeColor(gracedColor);
+            isGraced = true;
+            isHit = false;
+            vulnerable = false;
+            disableDeflect();
+        }
+
+        @Override
+        protected void runnable() {
+            // inState();
+            if (!isInRange(ball) || vulnerable) endTask();
+        }
+
+        @Override
+        protected void finish() { revertStates(); }
+    }
+
+    private class Hit extends AsyncTask {
+
+        private Ball ball;
+
+        public Hit(int interval, double duration, Ball ball) {
+            super(interval, duration);
+
+            this.ball = ball;
+
+            inState();
+
+            startTask();
+        }
+
+        private void inState() {
+            render.changeColor(hitColor);
+            isHit = true;
             isGraced = false;
+            vulnerable = false;
+            disableDeflect();
 
-            render.defaultColor();
+            render.canLook = false;
+            setActive(false);
+            ball.setActive(false);
+            ball.hitColor();
         }
 
-        private class Charge extends AsyncTask {
-            public Charge(int interval) {
-                super(interval);
-
-                render.playChargeAnim();
-                power = 0;
-                isCharging = true;
-                canDeflect = false;
-                
-                startTask();
-            }
-
-            @Override
-            protected void runnable() {
-                power++;
-                if (!mousePressed || power >= 100) {
-                    new Deflect(interval, 1);
-                    endTask();
-                }
-            }
+        @Override
+        protected void runnable() { 
+            // inState();
         }
 
-        private class Deflect extends AsyncTask {
-            public Deflect(int interval, double duration) {
-                super(interval, duration);
-
-                render.playDeflectAnim();
-                isCharging = false;
-
-                if (isInRange(ball) && vulnerable) {
-                    isDeflected = true;
-                    ball.redirectTowards(mX, mY);
-                    new Grace(interval, 2);
-                } else {
-                    startTask();
-                }
-            }
-
-            @Override
-            protected void runnable() {
-                // if (isDeflected)
-                // if (isInRange(ball)) {
-                //     isDeflected = true;
-                //     ball.redirectTowards(mX, mY);
-                //     new Grace(interval, 2);
-                //     endTask();
-                // }
-            }
-
-            @Override
-            protected void finish() { reset(); }
+        @Override
+        protected void finish() {
+            new Grace(interval, 1, ball);
+            render.canLook = true;
+            setActive(true);
+            ball.setActive(true);
+            ball.defaultColor();
+            ball.resetBallVelocity();
         }
+    }
 
-        private class Grace extends AsyncTask {
-            public Grace(int interval, double duration) {
-                super(interval, duration);
-                render.changeColor(gracedColor);
-                isGraced = true;
-                vulnerable = false;
+    public void hurt(Ball ball) { 
+        if (isHit || isGraced || !vulnerable) return;
 
-                startTask();
-            }
+        isHit = true;
+        lives--;
 
-            @Override
-            protected void runnable() {
-                if (!isInRange(ball) || vulnerable) endTask();
-            }
-
-            @Override
-            protected void finish() { reset(); }
-        }
+        disableDeflect();
+        new Hit(10, 1, ball);
     }
 
 }

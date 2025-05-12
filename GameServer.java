@@ -8,26 +8,29 @@ import java.awt.*;
 import java.util.ArrayList;
 // import java.util.Random;
 
-public class GameServer {
+public class GameServer extends AsyncTask{
 
-    private static final int maxConnections = 2, interval = 10;
+    private static final int maxConnections = 2;
     private static final int w = 1024, h = 768, rfcCount = 5, wtcCount = 5;
     private static final double ballSize = 120, ballVelocity = 10;
-    private static final double playerSize = 70, playerRange = 100, playerSpeed = 5;
+    private static final double playerSize = 70, playerRange = 100, playerVelocity = 5;
+    private static final int lives = 3;
 
     private int port, connections;
     private ServerSocket ss;
 
     private Ball b;
+    private Player player1, player2;
+    private int p1Lives = lives, p2Lives = lives;
     private double bX, bY, p1X, p1Y, p1R, m1X, m1Y, p2X, p2Y, p2R, m2X, m2Y;
-    private boolean ballDeflected = false;
     
 
     private Socket p1, p2;
     private ReadFromClient p1RFC, p2RFC;
     private WriteToClient p1WTC, p2WTC;
     
-    public GameServer(int port) {
+    public GameServer(int port, int interval) {
+        super(interval); // Milliseconds between loops
         this.port = port;
         this.connections = 0;
 
@@ -44,7 +47,11 @@ public class GameServer {
         p2X = offsetXP2;
         p2Y = offsetY;
 
-        b = new Ball(bX, bY, ballSize, ballVelocity, Color.BLACK, w, h, interval);
+        player1 = new Player(1, p1X, p1Y, playerSize, playerVelocity, playerRange, Color.BLUE, lives);
+
+        player2 = new Player(1, p2X, p2Y, playerSize, playerVelocity, playerRange, Color.BLUE, lives);
+
+        b = new Ball(bX, bY, ballSize, ballVelocity, Color.BLACK);
 
         try {
             System.out.println("Starting GameServer...");
@@ -77,9 +84,10 @@ public class GameServer {
             out.writeDouble(bY);
             
             // Player Attributes
+            out.writeInt(lives);
             out.writeDouble(playerSize);
             out.writeDouble(playerRange);
-            out.writeDouble(playerSpeed);
+            out.writeDouble(playerVelocity);
 
             // Player Position
             out.writeDouble((clientID == 1) ? p1X : p2X);
@@ -92,19 +100,6 @@ public class GameServer {
             System.out.println("Failed to set up connection.");
         }
 
-    }
-
-    private void runThreads() {
-        p1WTC.sendStartMsg();
-        p2WTC.sendStartMsg();
-
-        ArrayList<Thread> threads = new ArrayList<Thread>();
-        threads.add(new Thread(p1RFC));
-        threads.add(new Thread(p2RFC));
-        threads.add(new Thread(p1WTC));
-        threads.add(new Thread(p2WTC));
-
-        for (Thread t : threads) t.start();
     }
 
     public void acceptConnections() {
@@ -140,26 +135,34 @@ public class GameServer {
 
             System.out.println("Starting Game.");
 
-            // Thread t = new Thread(b);
-            // t.start();
-            b.startRunnable();
-            
-            Thread detectDeflect = new Thread(() -> {
-                try {
-                    while (true) {
-                        // System.out.println();
-                        Thread.sleep(100);
-                    }
-                } catch(Exception e) {
-                    System.out.println(e);
-                }
-            });
-
-            detectDeflect.start();
+            b.run(w, h);
 
         } catch (IOException e) {
             // ...
         }
+    }
+
+    private void runThreads() {
+        p1WTC.sendStartMsg();
+        p2WTC.sendStartMsg();
+
+        ArrayList<Thread> threads = new ArrayList<Thread>();
+        threads.add(new Thread(p1RFC));
+        threads.add(new Thread(p2RFC));
+        threads.add(new Thread(p1WTC));
+        threads.add(new Thread(p2WTC));
+
+        for (Thread t : threads) t.start();
+    }
+
+    @Override
+    protected void runnable() {
+        // System.out.println(p1Lives + ", " + p2Lives);
+    }
+
+    @Override
+    protected void finish() {
+        System.exit(0);
     }
 
     private class ReadFromClient implements Runnable {
@@ -187,6 +190,7 @@ public class GameServer {
                         m1X = read.get(2);
                         m1Y = read.get(3);
                         p1R = read.get(4);
+                        p1Lives = in.readInt();
                         if (in.readBoolean()) b.redirectTowards(m1X, m1Y);
                     } else {
                         p2X = read.get(0);
@@ -194,6 +198,7 @@ public class GameServer {
                         m2X = read.get(2);
                         m2Y = read.get(3);
                         p2R = read.get(4);
+                        p2Lives = in.readInt();
                         if (in.readBoolean()) b.redirectTowards(m2X, m2Y);
                     }
                     
@@ -225,10 +230,12 @@ public class GameServer {
                     write.add(b.getY());
 
                     if (clientID == 1) {
+                        out.writeInt(p2Lives);
                         write.add(p2X);
                         write.add(p2Y);
                         write.add(p2R);
                     } else {
+                        out.writeInt(p1Lives);
                         write.add(p1X);
                         write.add(p1Y);
                         write.add(p1R);
@@ -259,8 +266,8 @@ public class GameServer {
     }
 
     public static void main(String[] args) {
-        GameServer gs = new GameServer(9452);
-        // gs.setUpGameEntities();
+        int interval = 10; // Milliseconds between loops
+        GameServer gs = new GameServer(9452, interval);
         gs.acceptConnections();
     }
 

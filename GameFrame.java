@@ -60,11 +60,8 @@ public class GameFrame {
             (w-120)/2,
             (h-120)/2,
             120,
-            10,
-            Color.BLACK,
-            w,
-            h,
-            10
+            5,
+            Color.BLACK
         );
 
         GameCanvas gc = new GameCanvas(
@@ -79,8 +76,10 @@ public class GameFrame {
         GameFrame gf = new GameFrame(w, h, client, gc);
         // Thread t = new Thread(gc);
         // t.start();
-        ball.startRunnable();
+        // ball.startRunnable();
+
         gf.setUpGUI();
+        ball.run(w, h);
     }
     // */
 }

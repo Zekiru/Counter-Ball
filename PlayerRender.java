@@ -72,7 +72,10 @@ public class PlayerRender extends Drawable {
 
     }
 
-    protected void playChargeAnim() { animation = new ChargeAnimation(10, 0.2); }
+    protected void playChargeAnim(double duration) { 
+        animation.endTask();
+        animation = new ChargeAnimation(10, duration); 
+    }
 
     private class ChargeAnimation extends AsyncTask {
 
@@ -92,7 +95,10 @@ public class PlayerRender extends Drawable {
 
     }
 
-    protected void playDeflectAnim() { new DeflectAnimation(10, 0.12); }
+    protected void playDeflectAnim(double duration) { 
+        animation.endTask();
+        animation = new DeflectAnimation(10, duration); 
+    }
 
     private class DeflectAnimation extends AsyncTask {
 
@@ -105,7 +111,7 @@ public class PlayerRender extends Drawable {
         }
 
         @Override
-        protected void runnable() { setR(getR() - 360 / 12); }
+        protected void runnable() { setR(getR() - (360 / (duration * 100))); }
 
         @Override
         protected void finish() { canLook = true; }

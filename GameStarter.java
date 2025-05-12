@@ -11,6 +11,7 @@ public class GameStarter {
     private GameFrame gf;
 
     private Ball ball;
+    private int playerLives, oppLives;
     private Player player, opponent;
     private double playerSize, playerRange, playerVelocity;
     // private boolean ballDeflected = false;
@@ -54,6 +55,7 @@ public class GameStarter {
             double ballY = in.readDouble();
             
             // Player Attributes
+            playerLives = in.readInt();
             playerSize = in.readDouble();
             playerRange = in.readDouble();
             playerVelocity = in.readDouble();
@@ -64,9 +66,9 @@ public class GameStarter {
             double opponentX = in.readDouble();
             double opponentY = in.readDouble();
 
-            ball = new Ball(ballX, ballY, ballSize, ballVelocity, Color.BLACK, w, h, interval);
-            player = new Player(id1, playerX, playerY, playerSize, playerVelocity, playerRange, Color.BLUE, 3);
-            opponent = new Player(id2, opponentX, opponentY, playerSize, playerVelocity, playerRange, Color.RED, 3);
+            ball = new Ball(ballX, ballY, ballSize, ballVelocity, Color.BLACK);
+            player = new Player(id1, playerX, playerY, playerSize, playerVelocity, playerRange, Color.BLUE, playerLives);
+            opponent = new Player(id2, opponentX, opponentY, playerSize, playerVelocity, playerRange, Color.RED, playerLives);
 
         } catch (Exception e) {
             System.out.println("Failed to set up connection.");
@@ -122,6 +124,8 @@ public class GameStarter {
                 while (true) {
                     ArrayList<Double> read = new ArrayList<Double>();
 
+                    oppLives = in.readInt();
+
                     for (int i = 0; i < rfsCount; i++) read.add(in.readDouble());
 
                     if (ball != null) {
@@ -176,6 +180,7 @@ public class GameStarter {
 
                     for (int i = 0; i < wtsCount; i++) out.writeDouble(write.get(i));
 
+                    out.writeInt(player.getLives());
                     out.writeBoolean(gc.isDeflected());
 
                     out.flush();
@@ -194,7 +199,10 @@ public class GameStarter {
     }
 
     public static void main(String[] args) {
-        GameStarter gs = new GameStarter("localhost", 9452);
+        String localHost = "localhost";
+        String host = "192.168.100.53";
+
+        GameStarter gs = new GameStarter(host, 9452);
         // gs.setUpGameEntities();
         gs.connectToServer();
     }
