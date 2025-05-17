@@ -136,7 +136,7 @@ public class GameProcess extends AsyncTask {
         if (p.isColliding(ball)) {
             p.hurt(ball);
         } else if (p.isInRange(ball)) {
-            ball.isInRangeColor();
+            ball.inRangeColor();
         } else {
             ball.defaultColor();
         }

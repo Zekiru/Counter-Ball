@@ -8,14 +8,13 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     private double mX = 0, mY = 0;
     
     private boolean canMove = true, canDeflect = true, canDash = true, vulnerable = true;
-    private boolean isMoving, isCharging, isDeflected, isGraced, isHit;
+    private boolean isMoving, isCharging, isDeflecting, isDeflected, isInCooldown, isGraced, isHit;
 
     private boolean mousePressed, upPressed, downPressed, leftPressed, rightPressed;
 
-    private PlayerRender render;
+    protected PlayerRender render;
 
-    private final static Color hitColor = Color.BLACK;
-    private final static Color gracedColor = new Color(200, 200, 200);
+    private AsyncTask deflectprocess, dashProcess;
 
     public Player(int clientID, double x, double y, double size, double velocity, double range, Color color, int lives) {
         super(x, y, size, size, color);
@@ -44,9 +43,11 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     public double getCenterY() { return y + (size / 2); }
     public double getR() { return render.getR(); }
 
+    public boolean canDeflect() { return canDeflect; }
     public boolean isVulnerable() { return vulnerable; }
     public boolean isMoving() { return isMoving; }
     public boolean isCharging() { return isCharging; }
+    public boolean isInCooldown() { return isInCooldown; }
     
     public boolean isDeflected() {
         if (isDeflected) {
@@ -217,24 +218,49 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         return dist < r1 + r2 + this.range;
     }
 
-    public void deflectProcess(int interval, Ball ball) { if (canDeflect) new Charge(interval, ball); }
+    public void defaultColor() { render.defaultColor(); }
+    public void warningColor() { render.warningColor(); }
+    public void inRangeColor() { render.inRangeColor(); }
+    public void gracedColor() { render.gracedColor(); }
+    public void hitColor() { render.hitColor(); }
 
-    public void disableDeflect() {
-        power = 0;
-        canDeflect = false;
+    public void setGracedColor(boolean graced) {
+        if (graced) {
+            isGraced = true;
+            gracedColor();
+        } else {
+            isGraced = false;
+            defaultColor();
+        }
     }
 
+    public void setHitColor(boolean hit) {
+        if (isGraced) return;
+        if (hit) {
+            isHit = true;
+            hitColor();
+        } else {
+            isHit = false;
+            defaultColor();
+        }
+    }
+
+    public void deflectProcess(int interval, Ball ball) { if (canDeflect) deflectprocess = new Charge(interval, ball); }
+
+    public void disableDeflect() { canDeflect = false; }
+
     public void revertStates() {
-        power = 0;
         canDeflect = true;
         vulnerable = true;
 
         isCharging = false;
+        isInCooldown = false;
         isGraced = false;
 
         isHit = false;
 
-        render.defaultColor();
+        defaultColor();
+
     }
 
     private class Charge extends AsyncTask {
@@ -246,7 +272,9 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
 
             this.ball = ball;
 
+            render.canLook = true;
             render.playChargeAnim(0.4);
+            power = 0;
             isCharging = true;
             disableDeflect();
             
@@ -255,9 +283,12 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
 
         @Override
         protected void runnable() {
+            if (isHit) { endTask(); }
+
             power++;
-            if (!mousePressed || power >= 100) {
-                new Deflect(interval, 0.12, ball);
+            if ((!mousePressed || power >= 100) && !isHit) {
+                render.animation.endTask();
+                deflectprocess = new Deflect(interval, 0.18, ball);
                 endTask();
             }
         }
@@ -273,27 +304,36 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
 
             this.ball = ball;
 
+            render.canLook = false;
             render.playDeflectAnim(duration);
+            gracedColor();
+            isDeflecting = true;
             isCharging = false;
             disableDeflect();
 
             startTask();
         }
 
+
         @Override
         protected void runnable() {
-            // if (isHit || isGraced || !canDeflect) { endTask(); revertStates(); return; }
-            if (isInRange(ball) && vulnerable) {
+            if (isHit) { safe = false; endTask(); }
+
+            if (isInRange(ball) && !isHit) {
                 isDeflected = true;
                 safe = true;
-                ball.redirectTowards(mX, mY);
-                new Grace(interval, 1, ball);
+                ball.redirectTowards(mX, mY, power);
+                deflectprocess = new Grace(interval, 1, ball);
                 endTask();
             }
         }
 
         @Override
-        protected void finish() { if (!safe) new DeflectCooldown(interval, 1); }
+        protected void finish() {
+            isDeflecting = false;
+            if (isHit) render.animation.endTask();
+            if (!safe && !isHit) new DeflectCooldown(interval, 1);
+        }
     }
 
     private class DeflectCooldown extends AsyncTask {
@@ -301,9 +341,10 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         public DeflectCooldown(int interval, double duration) {
             super(interval, duration);
 
-            // render.playDeflectAnim();
+            render.defaultColor();
+            render.canLook = true;
+            isInCooldown = true;
             disableDeflect();
-            isCharging = false;
 
             startTask();
         }
@@ -330,7 +371,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         }
 
         private void inState() {
-            render.changeColor(gracedColor);
+            gracedColor();
             isGraced = true;
             isHit = false;
             vulnerable = false;
@@ -339,8 +380,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
 
         @Override
         protected void runnable() {
-            // inState();
-            if (!isInRange(ball) || vulnerable) endTask();
+            if (!isInRange(ball) || vulnerable || isHit) endTask();
         }
 
         @Override
@@ -355,6 +395,8 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
             super(interval, duration);
 
             this.ball = ball;
+            render.animation.endTask();
+            lives--;
 
             inState();
 
@@ -362,42 +404,39 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         }
 
         private void inState() {
-            render.changeColor(hitColor);
+            hitColor();
             isHit = true;
             isGraced = false;
             vulnerable = false;
             disableDeflect();
 
-            render.canLook = false;
             setActive(false);
             ball.setActive(false);
-            ball.hitColor();
         }
 
         @Override
-        protected void runnable() { 
-            // inState();
-        }
+        protected void runnable() { inState(); }
 
         @Override
         protected void finish() {
-            new Grace(interval, 1, ball);
+            deflectprocess = new Grace(interval, 1, ball);
+
             render.canLook = true;
+            render.r2 = 0;
+
             setActive(true);
+
             ball.setActive(true);
             ball.defaultColor();
-            ball.resetBallVelocity();
+            ball.resetVelocity();
         }
     }
 
     public void hurt(Ball ball) { 
-        if (isHit || isGraced || !vulnerable) return;
-
-        isHit = true;
-        lives--;
-
+        if (isHit || isGraced || !vulnerable || isDeflecting) return;
+        
         disableDeflect();
-        new Hit(10, 1, ball);
+        deflectprocess = new Hit(10, 1, ball);
     }
 
 }

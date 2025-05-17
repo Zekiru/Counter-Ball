@@ -128,77 +128,35 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
                 if (e == ball) continue;
 
                 if (eX < 0 || eX + eW > this.w) {
-                    if (e == ball) ball.bounce(true);
+                    // if (e == ball) ball.bounce(true);
                     e.setX((eX < 0) ? 0 : w - eW);
                 }
         
                 if (eY < 0 || eY + eH > this.h) {
-                    if (e == ball) ball.bounce(false);
+                    // if (e == ball) ball.bounce(false);
                     e.setY((eY < 0) ? 0 : h - eH);
                 }
-
-                if (player.isColliding(opponent)) {
-                    double dx = player.getCenterX() - opponent.getCenterX();
-                    double dy = player.getCenterY() - opponent.getCenterY();
-                    double distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (distance == 0) {
-                        // Prevent divide-by-zero (players perfectly overlapping)
-                        dx = 1;
-                        dy = 0;
-                        distance = 1;
-                    }
-
-                    double overlap = (player.getSize() / 2 + opponent.getSize() / 2) - distance;
-
-                    // Normalize
-                    dx /= distance;
-                    dy /= distance;
-
-                    // Push each player away from each other by half the overlap
-                    double pushX = dx * (overlap / 2);
-                    double pushY = dy * (overlap / 2);
-
-                    player.setX(player.getX() + pushX);
-                    player.setY(player.getY() + pushY);
-                    opponent.setX(opponent.getX() - pushX);
-                    opponent.setY(opponent.getY() - pushY);
-                }
-
-                // if (opponent.isGraced()) {
-                //     ball.gracedColor();
-                //     continue;
-                // }
-
-                if (opponent.isColliding(ball)) {
-                    ball.hitColor();
-                    continue;
-                }
-
-                if (player.isGraced()) {
-                    ball.gracedColor();
-                    continue;
-                }
-
-                if (player.isColliding(ball) && player.isVulnerable()) {
-                    player.hurt(ball);
-                    ball.hitColor();
-                    // System.out.println(player.getLives());
-                    continue;
-                }
-
-                if (player.isInRange(ball) && player.isVulnerable()) {
-                    ball.isInRangeColor();
-                    continue;
-                }
-
-                ball.defaultColor();
                 
             }
+
+            // opponent.setMX(player.getCenterX());
+            // opponent.setMY(player.getCenterY());
+
+            // if (opponent.isInRange(ball) && opponent.isVulnerable()) {
+            //     // ball.isInRangeColor();
+            //     opponent.deflectProcess(10, ball);
+            //     continue;
+            // }
+
+            if (player.isColliding(opponent)) handleCircleRigidBodyCollision(player, opponent);
+
+            handleEntityInteraction();
 
             if (player.isDeflected()) this.isDeflected = true;
 
             for (GameEntity e : ge) if (e != ball) e.update();
+
+            
 
             this.repaint();
 
@@ -208,6 +166,54 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
                 System.out.println(e);
             }
         }
+    }
+
+    private void handleCircleRigidBodyCollision(GameEntity e1, GameEntity e2) {
+        double dx = (e1.getX() + e1.getW()) - (e2.getX() + e2.getW());
+        double dy = (e1.getY() + e1.getH()) - (e2.getY() + e2.getH());
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance == 0) {
+            // Prevent divide-by-zero (players perfectly overlapping)
+            dx = 1;
+            dy = 0;
+            distance = 1;
+        }
+
+        double overlap = (e1.getW() / 2 + e2.getW() / 2) - distance;
+
+        // Normalize
+        dx /= distance;
+        dy /= distance;
+
+        // Push each player away from each other by half the overlap
+        double pushX = dx * (overlap / 2);
+        double pushY = dy * (overlap / 2);
+
+        e1.setX(e1.getX() + pushX);
+        e1.setY(e1.getY() + pushY);
+
+
+        e2.setX(e2.getX() - pushX);
+        e2.setY(e2.getY() - pushY);
+    }
+
+    private void handleEntityInteraction() {
+        if (player.isColliding(ball) && player.isVulnerable()) {
+            player.hurt(ball);
+            // System.out.println(player.getLives());
+        }
+        
+        ball.defaultColor();
+        if (player.isInRange(ball)) {
+            if (!player.isInCooldown()) {
+                ball.inRangeColor();
+            } else {
+                ball.warningColor();
+            }
+        }
+        if (player.isGraced()) { ball.gracedColor(); }
+        if (player.isHit()) ball.hitColor();
     }
 
     @Override

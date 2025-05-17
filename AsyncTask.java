@@ -20,8 +20,9 @@ public abstract class AsyncTask implements Runnable {
         this.defined = true;
     }
 
-    public final void startTask() { new Thread(this).start(); }
-    public final void endTask() { this.running = false; }
+    public void startTask() { new Thread(this).start(); }
+    public void endTask() { this.running = false; }
+    public boolean isRunning() {return this.running; }
 
     protected abstract void runnable();
     protected void finish() {}
@@ -34,7 +35,7 @@ public abstract class AsyncTask implements Runnable {
                 try {
                     Thread.sleep(interval);
                 } catch (InterruptedException e) {
-                    // System.out.println(e);
+                    Thread.currentThread().interrupt();
                 }
             }
         } else {

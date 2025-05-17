@@ -4,14 +4,17 @@ import java.util.Random;
 public class Ball extends GameEntity {
 
     private int delta = 1;
-    private double size, velocity, initialVelocity, direction;
+    private double size, velocity, initialVelocity, direction, power = 0;
 
     private Circle render;
     private Color currentColor;
 
-    private final static Color hitColor = Color.BLACK;
+    private AsyncTask ballProcess;
+
+    private final static Color hitColor = new Color(0, 0, 0);
     private final static Color gracedColor = new Color(200, 200, 200);
-    private final static Color inRangeColor = Color.GREEN;
+    private final static Color warningColor = new Color(255, 165, 0);
+    private final static Color inRangeColor = new Color(0, 255, 0);
 
     public Ball(double x, double y, double size, double velocity, Color color) {
         super(x, y, size, size, color);
@@ -30,12 +33,16 @@ public class Ball extends GameEntity {
 
     @Override
 	public void update() {
+        double powerMultiplier = 10;
+        double powerAdd = (powerMultiplier * power / 100);
+        double powerAndVelocity = velocity + powerAdd;
+
         if (!this.active) return;
 
 		double radians = Math.toRadians(direction);
 
-        this.x += Math.cos(radians) * this.velocity;
-        this.y += Math.sin(radians) * this.velocity;
+        this.x += Math.cos(radians) * powerAndVelocity;
+        this.y += Math.sin(radians) * powerAndVelocity;
 	}
 
 	@Override
@@ -51,7 +58,11 @@ public class Ball extends GameEntity {
 	@Override
 	public GameEntity.EntityType getType() { return EntityType.BALL; }
 
-
+    public void resetVelocity() {
+        velocity = initialVelocity;
+        power = 0;
+        delta = 1;
+    }
 
     public void bounce(boolean vertical) {
         if (vertical) {
@@ -65,13 +76,15 @@ public class Ball extends GameEntity {
         if (direction < 0) direction += 360;
     }
 
-    public void redirectTowards(double x, double y) {
+    public void redirectTowards(double x, double y, double power) {
         double dx = x - (this.x + (this.size/2));
         double dy = y - (this.y + (this.size/2));
 
         direction = Math.toDegrees(Math.atan2(dy, dx));
 
         if (direction < 0) direction += 360;
+
+        this.power += ((power < 25) ? 0 : power);
     }
 
     public boolean isColliding(GameEntity e) {
@@ -97,35 +110,26 @@ public class Ball extends GameEntity {
         return false;
     }
 
-    public void changeColor(Color color) { currentColor = color; }
-
     public void defaultColor() { currentColor = this.color; }
 
-    public void isInRangeColor() { currentColor = inRangeColor; }
+    public void inRangeColor() { currentColor = inRangeColor; }
+
+    public void warningColor() { currentColor = warningColor; }
 
     public void gracedColor() { currentColor = gracedColor; }
 
     public void hitColor() { currentColor = hitColor; }
 
-    public void updateBallVelocity() {
-        
-    }
+    public void endProcess() { if (ballProcess != null) ballProcess.endTask(); }
 
-    public void resetBallVelocity() {
-        velocity = initialVelocity;
-        delta = 1;
-    }
-
-    public void run(int w, int h) {
-        AsyncTask r = new AsyncTask(10) {
+    public void startProcess(int w, int h) {
+        ballProcess = new AsyncTask(10) {
             @Override
             protected void runnable() {
-                if (velocity < 17) {
-                    velocity += 0.003;
-                } else {
-                    velocity = 15 + Math.log(delta) / 4;
-                    delta++;
-                }
+                // System.out.println(velocity);
+                // System.out.println(power);
+                velocity = initialVelocity + Math.log(Math.pow((delta + 4)/5, 3/2));
+                delta++;
 
                 if (x < 0 || x + size > w) {
                     bounce(true);
@@ -138,9 +142,12 @@ public class Ball extends GameEntity {
                 }
 
                 update();
+
+                if (delta % 4 == 0) power -= (power > 0.01) ? Math.log(power + 1) / 10 : power;
+                power = (power > 50) ? 50 : power;
             }
         };
-        r.startTask();
+        ballProcess.startTask();
     }
 
 }

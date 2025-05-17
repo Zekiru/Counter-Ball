@@ -89,15 +89,17 @@ public class GameStarter {
 
             System.out.printf("Connected to server as Player %d\n", clientID);
 
-            rfs = new ReadFromServer(in);
-            wts = new WriteToServer(out);
+            rfs = new ReadFromServer(interval, in);
+            wts = new WriteToServer(interval, out);
 
             rfs.waitForStartMsg();
 
             gf.setUpGUI();
 
         } catch (IOException e) {
-            System.out.println(e);
+            System.out.println("Failed to Connect to the Server.");
+            // System.out.println(e);
+            System.exit(0);
         }
     }
 
@@ -109,39 +111,42 @@ public class GameStarter {
         for (Thread t : threads) t.start();
     }
 
-    private class ReadFromServer implements Runnable {
+    private class ReadFromServer extends AsyncTask {
 
         private DataInputStream in;
 
-        public ReadFromServer(DataInputStream in) {
+        public ReadFromServer(int interval, DataInputStream in) {
+            super(interval);
+
             this.in = in;
-            System.out.println("RFS Runnable created.");
+            // System.out.println("RFS Runnable created.");
         }
 
         @Override
-        public void run() {
+        public void runnable() {
             try {
-                while (true) {
-                    ArrayList<Double> read = new ArrayList<Double>();
+                ArrayList<Double> read = new ArrayList<Double>();
 
-                    oppLives = in.readInt();
+                oppLives = in.readInt();
 
-                    for (int i = 0; i < rfsCount; i++) read.add(in.readDouble());
+                for (int i = 0; i < rfsCount; i++) read.add(in.readDouble());
 
-                    if (ball != null) {
-                        ball.setX(read.get(0));
-                        ball.setY(read.get(1));
-                    }
+                if (ball != null) {
+                    ball.setX(read.get(0));
+                    ball.setY(read.get(1));
+                }
 
-                    if (opponent != null) {
-                        opponent.setX(read.get(2));
-                        opponent.setY(read.get(3));
-                        opponent.setR(read.get(4));
-                    }
-                    
+                if (opponent != null) {
+                    opponent.setX(read.get(2));
+                    opponent.setY(read.get(3));
+                    opponent.setR(read.get(4));
+                    opponent.setGracedColor(in.readBoolean());
+                    opponent.setHitColor(in.readBoolean());
                 }
             } catch (IOException e) {
-                System.out.println(e);
+                // System.out.println(e);
+                this.endTask();
+                if (!wts.isRunning()) connectionLost();
             }
         }
 
@@ -152,57 +157,68 @@ public class GameStarter {
 
                 runThreads();
             } catch (IOException e) {
+                System.out.println("Failed Server-Client Handshake.");
                 System.out.println(e);
+                System.exit(0);
             }
         }
     }
 
-    private class WriteToServer implements Runnable {
+    private class WriteToServer extends AsyncTask {
 
         private DataOutputStream out;
 
-        public WriteToServer(DataOutputStream out) {
+        public WriteToServer(int interval, DataOutputStream out) {
+            super(interval);
+
             this.out = out;
-            System.out.println("WTS Runnable created.");
+            // System.out.println("WTS Runnable created.");
         }
 
         @Override
-        public void run() {
+        public void runnable() {
             try {
-                while (true) {
-                    ArrayList<Double> write = new ArrayList<Double>();
+                ArrayList<Double> write = new ArrayList<Double>();
 
-                    write.add(player.getX());
-                    write.add(player.getY());
-                    write.add(gc.getMX());
-                    write.add(gc.getMY());
-                    write.add(player.getR());
+                write.add(player.getX());
+                write.add(player.getY());
+                write.add(gc.getMX());
+                write.add(gc.getMY());
+                write.add(player.getR());
 
-                    for (int i = 0; i < wtsCount; i++) out.writeDouble(write.get(i));
+                for (int i = 0; i < wtsCount; i++) out.writeDouble(write.get(i));
 
-                    out.writeInt(player.getLives());
-                    out.writeBoolean(gc.isDeflected());
+                out.writeInt(player.getLives());
+                out.writeDouble(player.getPower());
+                out.writeBoolean(gc.isDeflected());
+                out.writeBoolean(player.isGraced());
+                out.writeBoolean(player.isHit());
 
-                    out.flush();
+                out.flush();
 
-                    try {
-                        Thread.sleep(interval);
-                    } catch (InterruptedException e) {
-                        System.out.println(e);
-                    }
+                try {
+                    Thread.sleep(interval);
+                } catch (InterruptedException e) {
+                    System.out.println(e);
                 }
             } catch (IOException e) {
-                System.out.println(e);
+                // System.out.println(e);
+                this.endTask();
+                if (!rfs.isRunning()) connectionLost();
             }
             
         }
     }
 
+    private void connectionLost() {
+        System.out.println("Connection to Server Lost.\nTerminating Program.\n");
+        System.exit(0);
+    }
+
     public static void main(String[] args) {
         String localHost = "localhost";
-        String host = "192.168.100.53";
 
-        GameStarter gs = new GameStarter(host, 9452);
+        GameStarter gs = new GameStarter(localHost, 9452);
         // gs.setUpGameEntities();
         gs.connectToServer();
     }

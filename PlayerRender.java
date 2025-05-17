@@ -22,7 +22,12 @@ public class PlayerRender extends Drawable {
     protected double r2, size;
     protected Color currentColor;
     protected boolean canLook = true;
-    private AsyncTask animation;
+    protected AsyncTask animation;
+
+    private final static Color hitColor = new Color(0, 0, 0);
+    private final static Color warningColor = new Color(255, 165, 0);
+    private final static Color inRangeColor = new Color(0, 255, 0);
+    private final static Color gracedColor = new Color(200, 200, 200);
 
     public PlayerRender(double x, double y, double size, Color color) {
         super(x, y, size, size, color);
@@ -74,15 +79,15 @@ public class PlayerRender extends Drawable {
 
     protected void playChargeAnim(double duration) { 
         animation.endTask();
-        animation = new ChargeAnimation(10, duration); 
+        animation = new ChargeAnimation(10); 
     }
 
     private class ChargeAnimation extends AsyncTask {
 
         private double current = 0, target = 70;
 
-        public ChargeAnimation(int interval, double duration) {
-            super(interval, duration);
+        public ChargeAnimation(int interval) {
+            super(interval);
 
             startTask();
         }
@@ -93,11 +98,14 @@ public class PlayerRender extends Drawable {
             r2 = (double) current;
 		}
 
+        @Override
+        protected void finish() { r2 = 0; }
+
     }
 
     protected void playDeflectAnim(double duration) { 
         animation.endTask();
-        animation = new DeflectAnimation(10, duration); 
+        animation = new DeflectAnimation(10, duration);
     }
 
     private class DeflectAnimation extends AsyncTask {
@@ -111,7 +119,7 @@ public class PlayerRender extends Drawable {
         }
 
         @Override
-        protected void runnable() { setR(getR() - (360 / (duration * 100))); }
+        protected void runnable() { setR(getR() - (360 / (duration * 100)));}
 
         @Override
         protected void finish() { canLook = true; }
@@ -135,5 +143,13 @@ public class PlayerRender extends Drawable {
     protected void changeColor(Color color) { currentColor = color; }
 
     public void defaultColor() { currentColor = this.color; }
+
+    public void hitColor() { currentColor = this.hitColor; }
+
+    public void warningColor() { currentColor = this.warningColor; }
+
+    public void inRangeColor() { currentColor = this.inRangeColor; }
+
+    public void gracedColor() { currentColor = this.gracedColor; }
 
 }

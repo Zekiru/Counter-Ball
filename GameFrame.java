@@ -40,6 +40,8 @@ public class GameFrame {
         frame.setTitle("Counter Ball - Player " + clientID);
         // frame.setSize(new Dimension(w, h));
         frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setResizable(false);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
 
@@ -53,14 +55,14 @@ public class GameFrame {
 
     }
 
-    // /*
+    /*
     public static void main(String[] args) {
         int client = 1, w = 1024, h = 768;
         Ball ball = new Ball(
             (w-120)/2,
             (h-120)/2,
             120,
-            5,
+            1,
             Color.BLACK
         );
 
@@ -79,7 +81,10 @@ public class GameFrame {
         // ball.startRunnable();
 
         gf.setUpGUI();
-        ball.run(w, h);
+
+        ball.startProcess(w, h);
+
+
     }
-    // */
+    */
 }
