@@ -70,6 +70,8 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     public void setR(double r) { render.setR(r); }
     public void rotateTo(double x, double y) { render.rotateTo(x, y); }
 
+    public void setLives(int lives) { this.lives = Math.max(0, lives); }
+
     @Override
 	public void update() {
         if (!this.active || !isMoving) return;

@@ -65,6 +65,10 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
         g2d.setRenderingHints(rh);
 
         for (GameEntity e : ge) e.draw(g2d);
+
+        // Draw player lives
+        drawHearts(g2d, player.getLives(), 20, 20); // top-left
+        drawHearts(g2d, opponent.getLives(), w - 110, 20); // top-right
     }
 
     public void setUpGameEntities() {
@@ -236,5 +240,39 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
 
     @Override
     public void mouseMoved(MouseEvent e) { updateMousePos(e); }
+
+    // UI
+
+    private void drawHearts(Graphics2D g2d, int lives, int x, int y) {
+        g2d.setColor(Color.RED);
+        int heartSize = 20;
+        int gap = 5;
+
+        for (int i = 0; i < lives; i++) {
+            int hx = x + i * (heartSize + gap);
+            drawHeartShape(g2d, hx, y, heartSize);
+        }
+    }
+
+    private void drawHeartShape(Graphics2D g2d, int x, int y, int size) {
+        double half = size / 2.0;
+        double quarter = size / 4.0;
+
+        // Top-left "lobe" of the heart
+        Rectangle left = new Rectangle(x, y, half, half, Color.RED);
+        left.setR(45);
+        
+        // Top-right "lobe"
+        Rectangle right = new Rectangle(x + half, y, half, half, Color.RED);
+        right.setR(45);
+
+        // Bottom triangle (rotated rectangle to mimic point)
+        Rectangle bottom = new Rectangle(x + quarter, y + quarter, half, half, Color.RED);
+        bottom.setR(45); // Assuming Drawable supports rotation via `r`
+
+        left.draw(g2d);
+        right.draw(g2d);
+        bottom.draw(g2d);
+    }
 
 }

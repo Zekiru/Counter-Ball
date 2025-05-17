@@ -11,7 +11,7 @@ public class GameStarter {
     private GameFrame gf;
 
     private Ball ball;
-    private int playerLives, oppLives;
+    private int playerLives;
     private Player player, opponent;
     private double playerSize, playerRange, playerVelocity;
     // private boolean ballDeflected = false;
@@ -127,7 +127,7 @@ public class GameStarter {
             try {
                 ArrayList<Double> read = new ArrayList<Double>();
 
-                oppLives = in.readInt();
+                opponent.setLives(in.readInt());
 
                 for (int i = 0; i < rfsCount; i++) read.add(in.readDouble());
 
