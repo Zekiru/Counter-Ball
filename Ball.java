@@ -33,7 +33,7 @@ public class Ball extends GameEntity {
 
     @Override
 	public void update() {
-        double powerMultiplier = 10;
+        double powerMultiplier = 15;
         double powerAdd = (powerMultiplier * power / 100);
         double powerAndVelocity = velocity + powerAdd;
 

@@ -27,11 +27,28 @@ public class GameServer extends AsyncTask{
     private WriteToClient p1WTC, p2WTC;
 
     private boolean p1Connected = false, p2Connected = false;
+    private boolean gameOver = false, active = false, reset = false;
+    private boolean p1Reset = false, p2Reset = false;
     
     public GameServer(int port, int interval) {
         super(interval); // Milliseconds between loops
         this.port = port;
         this.connections = 0;
+
+        setUpInitialData();
+
+        try {
+            System.out.println("Starting GameServer...");
+            ss = new ServerSocket(this.port);
+        } catch (IOException e) {
+            // ...
+        }
+
+    }
+
+    private void setUpInitialData() {
+        p1Lives = lives;
+        p2Lives = lives;
 
         double offsetXP1 = w*0.25 - playerSize/2;
         double offsetXP2 = w*0.75 - playerSize/2;
@@ -46,19 +63,7 @@ public class GameServer extends AsyncTask{
         p2X = offsetXP2;
         p2Y = offsetY;
 
-        // player1 = new Player(1, p1X, p1Y, playerSize, playerVelocity, playerRange, Color.BLUE, lives);
-
-        // player2 = new Player(1, p2X, p2Y, playerSize, playerVelocity, playerRange, Color.BLUE, lives);
-
         b = new Ball(bX, bY, ballSize, ballVelocity, Color.BLACK);
-
-        try {
-            System.out.println("Starting GameServer...");
-            ss = new ServerSocket(this.port);
-        } catch (IOException e) {
-            // ...
-        }
-
     }
 
     private void setUpConnection(int clientID, DataOutputStream out) {
@@ -137,9 +142,8 @@ public class GameServer extends AsyncTask{
             System.out.println("Starting Game.");
 
             // Run Game Below:
-
+            startGame();
             this.startTask();
-            b.startProcess(w, h);
 
         } catch (IOException e) {
             System.out.println("Failed to accept connection/s.");
@@ -205,6 +209,18 @@ public class GameServer extends AsyncTask{
                     p2Graced = in.readBoolean();
                     p2Hit = in.readBoolean();
                 }
+
+                // Game Data:
+                boolean reset = in.readBoolean();;
+
+                if (clientID == 1) {
+                    p1Reset = (!p1Reset) ? reset : true;
+                } else {
+                    p2Reset = (!p2Reset) ? reset : true;
+                }
+
+                gameOver = in.readBoolean();
+
             } catch (IOException e) {
                 // System.out.printf("RFC Failed for Player %d\n", clientID);
                 this.endTask();
@@ -229,6 +245,8 @@ public class GameServer extends AsyncTask{
         public void runnable() {
             try {
                 ArrayList<Double> write = new ArrayList<Double>();
+
+                out.writeBoolean(active);
 
                 write.add(b.getX());
                 write.add(b.getY());
@@ -256,14 +274,17 @@ public class GameServer extends AsyncTask{
                     out.writeBoolean(p1Hit);
                 }
                 
+                out.writeBoolean(gameOver);
+                out.writeBoolean(reset);
+                // if (reset) {
+                //     reset = false;
+                //     out.writeBoolean(true);
+                // } else {
+                //     out.writeBoolean(false);
+                // }
 
                 out.flush();
 
-                try {
-                    Thread.sleep(interval);
-                } catch (InterruptedException e) {
-                    System.out.println(e);
-                }
             } catch (IOException e) {
                 // System.out.printf("WTC Failed for Player %d\n", clientID);
                 this.endTask();
@@ -279,11 +300,53 @@ public class GameServer extends AsyncTask{
         }
     }
 
+    private void startGame() {
+        active = false;
+        AsyncTask startProcess = new AsyncTask(1000, 3) {
+            
+            @Override
+            protected void runnable() {}
+
+            @Override
+            protected void finish() {
+                active = true;
+                gameOver = false;
+                reset = false;
+                b.startProcess(w, h);
+            }
+        };
+
+        startProcess.startTask();
+    }
+
+    private void reset() {
+        reset = true;
+        setUpInitialData();
+        startGame();
+    }
+
     @Override
     protected void runnable() {
-        // Game Logic:
-        b.setActive(!p1Hit && !p2Hit);
-        if (!b.isActive()) b.resetVelocity();
+        // Handle Ball Logic:
+        if (!gameOver) {
+            b.setActive(!p1Hit && !p2Hit);
+            if (!b.isActive()) b.resetVelocity();
+        }
+
+        // Handle Game Over:
+        if ((p1Lives <= 0 || p2Lives <= 0) && !gameOver) {
+            gameOver =  true;
+            active = false;
+            b.endProcess();
+            // reset();
+        }
+
+        // Handle Reset:
+        if (p1Reset && p2Reset) {
+            p1Reset = false;
+            p2Reset = false;
+            reset();
+        }
 
         // Handle Disconnections:
         if (!p1RFC.isRunning() && !p1WTC.isRunning() && p1Connected) {
@@ -303,7 +366,12 @@ public class GameServer extends AsyncTask{
     }
 
     @Override
-    protected void finish() { System.exit(0); }
+    protected void finish() {
+        if (p1Lives > 0 && p2Lives > 0) System.exit(0);
+        System.out.println("Game Over!");
+        System.out.printf("Player %d Wins!\n", ((p1Lives > p2Lives) ? 1 : 2));
+        System.exit(0);
+    }
 
     public static void main(String[] args) {
         int interval = 10; // Milliseconds between loops

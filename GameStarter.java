@@ -11,9 +11,11 @@ public class GameStarter {
     private GameFrame gf;
 
     private Ball ball;
-    private int playerLives;
+    private double ballSize, ballVelocity, ballX, ballY;
+    private int id1, id2, playerLives;
     private Player player, opponent;
     private double playerSize, playerRange, playerVelocity;
+    private double playerX, playerY, opponentX, opponentY;
     // private boolean ballDeflected = false;
 
     private int w, h, rfsCount, wtsCount;
@@ -25,15 +27,30 @@ public class GameStarter {
     private ReadFromServer rfs;
     private WriteToServer wts;
 
+    private boolean active = false, reset = false;
+
+    // private boolean gameOver = false;
+
     public GameStarter(String host, int port) {
         this.host = host;
         this.port = port;
     }
 
+    private void setUpGameEntities() {
+        ball = new Ball(ballX, ballY, ballSize, ballVelocity, Color.BLACK);
+        player = new Player(id1, playerX, playerY, playerSize, playerVelocity, playerRange, Color.BLUE, playerLives);
+        opponent = new Player(id2, opponentX, opponentY, playerSize, playerVelocity, playerRange, Color.RED, playerLives);
+    }
+
+    public void reset() {
+        setUpGameEntities();
+        gc.resetGame(ball, player, opponent);
+    }
+
     private void setUpConnection(DataInputStream in) {
         try {
-            int id1 = clientID;
-            int id2 = (clientID == 2) ? 1 : 2;
+            id1 = clientID;
+            id2 = (clientID == 2) ? 1 : 2;
 
             // Delay (Sleep time in miliseconds)
             interval = in.readInt();
@@ -47,12 +64,12 @@ public class GameStarter {
             h = in.readInt();
 
             // Ball Attributes
-            double ballSize = in.readDouble();
-            double ballVelocity = in.readDouble();
+            ballSize = in.readDouble();
+            ballVelocity = in.readDouble();
 
             // Ball Position
-            double ballX = in.readDouble();
-            double ballY = in.readDouble();
+            ballX = in.readDouble();
+            ballY = in.readDouble();
             
             // Player Attributes
             playerLives = in.readInt();
@@ -61,14 +78,12 @@ public class GameStarter {
             playerVelocity = in.readDouble();
 
             // Position
-            double playerX = in.readDouble();
-            double playerY = in.readDouble();
-            double opponentX = in.readDouble();
-            double opponentY = in.readDouble();
+            playerX = in.readDouble();
+            playerY = in.readDouble();
+            opponentX = in.readDouble();
+            opponentY = in.readDouble();
 
-            ball = new Ball(ballX, ballY, ballSize, ballVelocity, Color.BLACK);
-            player = new Player(id1, playerX, playerY, playerSize, playerVelocity, playerRange, Color.BLUE, playerLives);
-            opponent = new Player(id2, opponentX, opponentY, playerSize, playerVelocity, playerRange, Color.RED, playerLives);
+            setUpGameEntities();
 
         } catch (Exception e) {
             System.out.println("Failed to set up connection.");
@@ -84,8 +99,9 @@ public class GameStarter {
             clientID = in.readInt();
             setUpConnection(in);
 
-            gc = new GameCanvas(w, h, clientID, ball, player, opponent);
-            gf = new GameFrame(w, h, clientID, gc);
+            setUpGameEntities();
+            gc = new GameCanvas(w, h, ball, player, opponent);
+            gf = new GameFrame(clientID, gc);
 
             System.out.printf("Connected to server as Player %d\n", clientID);
 
@@ -94,7 +110,10 @@ public class GameStarter {
 
             rfs.waitForStartMsg();
 
+            // Start Game:
+
             gf.setUpGUI();
+            
 
         } catch (IOException e) {
             System.out.println("Failed to Connect to the Server.");
@@ -127,7 +146,16 @@ public class GameStarter {
             try {
                 ArrayList<Double> read = new ArrayList<Double>();
 
-                opponent.setLives(in.readInt());
+                boolean serverActive = in.readBoolean();
+
+                if (!active && serverActive) {
+                    active = true;
+                    reset = false;
+                    gc.setActive(true);
+                    gc.setCanMove(true);
+                }
+
+                if (opponent != null) opponent.setLives(in.readInt());
 
                 for (int i = 0; i < rfsCount; i++) read.add(in.readDouble());
 
@@ -141,8 +169,26 @@ public class GameStarter {
                     opponent.setY(read.get(3));
                     opponent.setR(read.get(4));
                     opponent.setGracedColor(in.readBoolean());
-                    opponent.setHitColor(in.readBoolean());
+
+                    boolean isHit = in.readBoolean();
+
+                    player.setActive(!isHit);
+                    opponent.setHitColor(isHit);
                 }
+
+                // Game Over:
+                // if (in.readBoolean() && active) { gc.gameOver(); }
+
+                in.readBoolean();
+
+                // Reset:
+                if (in.readBoolean() && !reset) {
+                    active = false;
+                    reset = true;
+                    reset();
+                }
+
+                // if (player.getLives() <= 0 || opponent.getLives() <= 0) { gc.endGameLoop(); }
             } catch (IOException e) {
                 // System.out.println(e);
                 this.endTask();
@@ -178,6 +224,7 @@ public class GameStarter {
         @Override
         public void runnable() {
             try {
+                // Player Data:
                 ArrayList<Double> write = new ArrayList<Double>();
 
                 write.add(player.getX());
@@ -194,13 +241,12 @@ public class GameStarter {
                 out.writeBoolean(player.isGraced());
                 out.writeBoolean(player.isHit());
 
+                // Game Data:
+                out.writeBoolean(gc.wantsReset());
+                out.writeBoolean(gc.isGameOver());
+
                 out.flush();
 
-                try {
-                    Thread.sleep(interval);
-                } catch (InterruptedException e) {
-                    System.out.println(e);
-                }
             } catch (IOException e) {
                 // System.out.println(e);
                 this.endTask();

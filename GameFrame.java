@@ -20,24 +20,27 @@ import java.awt.*;
 
 public class GameFrame {
 
-    private int clientID, w, h;
+    private int clientID;
     private JFrame frame;
     private GameCanvas gc;
 
-    public GameFrame(int w, int h, int clientID, GameCanvas gc) {
+    public GameFrame(int clientID, GameCanvas gc) {
         this.clientID = clientID;
-        this.w = w;
-        this.h = h;
         this.gc = gc;
 
         // this.gc = new GameCanvas(w, h, clientID, ball, player, opp);
         
     }
 
+    public void newGC(GameCanvas gc) {
+        this.gc = gc;
+    }
+
     public void setUpGUI() {
         frame = new JFrame();
         frame.add(gc);
         frame.setTitle("Counter Ball - Player " + clientID);
+
         // frame.setSize(new Dimension(w, h));
         frame.pack();
         frame.setLocationRelativeTo(null);
@@ -47,12 +50,6 @@ public class GameFrame {
 
         gc.setUpGameEntities();
         gc.setUpListeners();
-        gc.startGameLoop();
-
-        // Thread t = new Thread(gc);
-        // t.start();
-
-
     }
 
     /*

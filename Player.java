@@ -325,7 +325,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
                 isDeflected = true;
                 safe = true;
                 ball.redirectTowards(mX, mY, power);
-                deflectprocess = new Grace(interval, 1, ball);
+                deflectprocess = new Grace(interval, 1, ball, false);
                 endTask();
             }
         }
@@ -361,11 +361,13 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     private class Grace extends AsyncTask {
 
         private Ball ball;
+        private boolean hit = false;
 
-        public Grace(int interval, double duration, Ball ball) {
+        public Grace(int interval, double duration, Ball ball, boolean hit) {
             super(interval, duration);
 
             this.ball = ball;
+            this.hit = hit;
 
             inState();
 
@@ -382,7 +384,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
 
         @Override
         protected void runnable() {
-            if (!isInRange(ball) || vulnerable || isHit) endTask();
+            if ((!isInRange(ball) || vulnerable || isHit) && !hit) endTask();
         }
 
         @Override
@@ -421,7 +423,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
 
         @Override
         protected void finish() {
-            deflectprocess = new Grace(interval, 1, ball);
+            deflectprocess = new Grace(interval, 3, ball, true);
 
             render.canLook = true;
             render.r2 = 0;
