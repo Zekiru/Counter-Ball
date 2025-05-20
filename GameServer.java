@@ -1,3 +1,19 @@
+/**
+    The Game Server, required to run the game on a network.
+    Connects with a max player size of 2.
+    @author Ezekiel Villasurda (236689)
+    @version 20 May 2025
+    I have not discussed the Java language code in our program
+    with anyone other than my instructor or the teaching assistants
+    assigned to this course.
+    I have not used Java language code obtained from another student,
+    or any other unauthorized source, either modified or unmodified.
+    If any Java language code or documentation used in my program
+    was obtained from another source, such as a textbook or website,
+    that has been clearly noted with a proper citation in the comments
+    of my program.
+**/
+
 import java.net.*;
 import java.io.*;
 import java.awt.*;
@@ -30,6 +46,7 @@ public class GameServer extends AsyncTask{
     private boolean gameOver = false, active = false, reset = false;
     private boolean p1Reset = false, p2Reset = false;
     
+    // Constructor that takes the needed Port and the Interval between loops
     public GameServer(int port, int interval) {
         super(interval); // Milliseconds between loops
         this.port = port;
@@ -46,6 +63,7 @@ public class GameServer extends AsyncTask{
 
     }
 
+    // Sets up the initial Game Data before running the Server
     private void setUpInitialData() {
         p1Lives = lives;
         p2Lives = lives;
@@ -66,6 +84,7 @@ public class GameServer extends AsyncTask{
         b = new Ball(bX, bY, ballSize, ballVelocity, Color.BLACK);
     }
 
+    // On a successful connection, output the initial Game Data values to the Client
     private void setUpConnection(int clientID, DataOutputStream out) {
         try {
             // Delay (Sleep time in miliseconds)
@@ -106,6 +125,7 @@ public class GameServer extends AsyncTask{
 
     }
 
+    // Starts accepting connections from Clients (Max of 2)
     public void acceptConnections() {
         try {
             System.out.println("Waiting for connections...");
@@ -150,6 +170,7 @@ public class GameServer extends AsyncTask{
         }
     }
 
+    // Runs all the necesary Threads responsible for handling the I/O Streams
     private void runThreads() {
         p1WTC.sendStartMsg();
         p2WTC.sendStartMsg();
@@ -163,11 +184,14 @@ public class GameServer extends AsyncTask{
         for (Thread t : threads) t.start();
     }
 
+    // The class that handles inputs from the client.
+    // Runs on a looped thread.
     private class ReadFromClient extends AsyncTask {
 
         private int clientID;
         private DataInputStream in;
 
+        // Contructor that takes in the interval between loops, the Client ID and the I/O Stream
         public ReadFromClient(int interval, int clientID, DataInputStream in) {
             super(interval);
             this.clientID = clientID;
@@ -175,6 +199,7 @@ public class GameServer extends AsyncTask{
             // System.out.printf("RFC Player %d Runnable created.\n", clientID);
         }
 
+        // The Input loop
         @Override
         public void runnable() {
             try {
@@ -228,11 +253,14 @@ public class GameServer extends AsyncTask{
         }
     }
 
+    // The class that handles outputs to the client.
+    // Runs on a looped thread.
     private class WriteToClient extends AsyncTask {
 
         private int clientID;
         private DataOutputStream out;
 
+        // Contructor that takes in the interval between loops, the Client ID and the I/O Stream
         public WriteToClient(int interval, int clientID, DataOutputStream out) {
             super(interval);
 
@@ -241,6 +269,7 @@ public class GameServer extends AsyncTask{
             // System.out.printf("WTC Player %d Runnable created.\n", clientID);
         }
 
+        // The Output loop
         @Override
         public void runnable() {
             try {
@@ -276,12 +305,6 @@ public class GameServer extends AsyncTask{
                 
                 out.writeBoolean(gameOver);
                 out.writeBoolean(reset);
-                // if (reset) {
-                //     reset = false;
-                //     out.writeBoolean(true);
-                // } else {
-                //     out.writeBoolean(false);
-                // }
 
                 out.flush();
 
@@ -291,6 +314,7 @@ public class GameServer extends AsyncTask{
             }
         }
 
+        // Send a Start Message to the CLient
         public void sendStartMsg() {
             try {
                 out.writeUTF("Starting the game. Enjoy!");
@@ -300,6 +324,7 @@ public class GameServer extends AsyncTask{
         }
     }
 
+    // Initiates the Start of the Game, with a 3 second pause before actually starting
     private void startGame() {
         active = false;
         AsyncTask startProcess = new AsyncTask(1000, 3) {
@@ -319,12 +344,14 @@ public class GameServer extends AsyncTask{
         startProcess.startTask();
     }
 
+    // Resets the Entire Game
     private void reset() {
         reset = true;
         setUpInitialData();
         startGame();
     }
 
+    // The game loop of the Server
     @Override
     protected void runnable() {
         // Handle Ball Logic:
@@ -365,6 +392,7 @@ public class GameServer extends AsyncTask{
         }
     }
 
+    // Runs instructions when the Server loop ends
     @Override
     protected void finish() {
         if (p1Lives > 0 && p2Lives > 0) System.exit(0);
@@ -373,6 +401,7 @@ public class GameServer extends AsyncTask{
         System.exit(0);
     }
 
+    // Allows instantiating this class using the CMD
     public static void main(String[] args) {
         int interval = 10; // Milliseconds between loops
         GameServer gs = new GameServer(9452, interval);

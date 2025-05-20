@@ -1,9 +1,10 @@
 /**
-    This class houses the main method which will create a JFrame for 
-    the canvas to be displayed in. It instantiates a new RectangleCanvas 
-    with a preferred size of the standard canvas size dimension (800, 600).
+    The GameFrame, a class houses the main method which will create a
+    JFrame for the GameCanvas to be displayed in. This class would require
+    you to pass the Client ID and a GameCanvas object which is needed to
+    run the game.
     @author Ezekiel Villasurda (236689)
-    @version 17 March 2025
+    @version 20 May 2025
     I have not discussed the Java language code in our program
     with anyone other than my instructor or the teaching assistants
     assigned to this course.
@@ -16,7 +17,6 @@
 **/
 
 import javax.swing.*;
-import java.awt.*;
 
 public class GameFrame {
 
@@ -24,18 +24,14 @@ public class GameFrame {
     private JFrame frame;
     private GameCanvas gc;
 
+    // Constructor that accepts the Client ID and the GameCanvas
     public GameFrame(int clientID, GameCanvas gc) {
         this.clientID = clientID;
         this.gc = gc;
-
-        // this.gc = new GameCanvas(w, h, clientID, ball, player, opp);
         
     }
 
-    public void newGC(GameCanvas gc) {
-        this.gc = gc;
-    }
-
+    // A method to set up the GUI
     public void setUpGUI() {
         frame = new JFrame();
         frame.add(gc);
@@ -51,37 +47,4 @@ public class GameFrame {
         gc.setUpGameEntities();
         gc.setUpListeners();
     }
-
-    /*
-    public static void main(String[] args) {
-        int client = 1, w = 1024, h = 768;
-        Ball ball = new Ball(
-            (w-120)/2,
-            (h-120)/2,
-            120,
-            1,
-            Color.BLACK
-        );
-
-        GameCanvas gc = new GameCanvas(
-            w,
-            h,
-            client,
-            ball,
-            new Player(1, w*0.25 - 70/2, (h-70)/2, 70, 5, 100, Color.BLUE, 3),
-            new Player(2, w*0.75 - 70/2, (h-70)/2, 70, 5, 100, Color.RED, 3)
-        );
-
-        GameFrame gf = new GameFrame(w, h, client, gc);
-        // Thread t = new Thread(gc);
-        // t.start();
-        // ball.startRunnable();
-
-        gf.setUpGUI();
-
-        ball.startProcess(w, h);
-
-
-    }
-    */
 }

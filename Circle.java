@@ -1,7 +1,8 @@
 /**
-    ...
+    The Circle, a Drawable class that draws a simple circle. Used to draw
+    the bodies of the Game Entities.
     @author Ezekiel Villasurda (236689)
-    @version 17 March 2025
+    @version 20 May 2025
     I have not discussed the Java language code in our program
     with anyone other than my instructor or the teaching assistants
     assigned to this course.
@@ -20,12 +21,14 @@ public class Circle extends Drawable {
     
     protected double size;
 
+    // Constructor to set the attributes of the Circle
     public Circle(double x, double y, double size, Color color) {
         super(x, y, size, size, color);
 
         this.size = size;
     }
 
+    // Draws the Circle
     @Override
     public void draw(Graphics2D g2d) {
         AffineTransform reset = g2d.getTransform();

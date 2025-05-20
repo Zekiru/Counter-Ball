@@ -1,3 +1,19 @@
+/**
+    The GameStarter, a class that runs the Client side of the Game.
+    Establishes a connection with the GameServer. 
+    @author Ezekiel Villasurda (236689)
+    @version 20 May 2025
+    I have not discussed the Java language code in our program
+    with anyone other than my instructor or the teaching assistants
+    assigned to this course.
+    I have not used Java language code obtained from another student,
+    or any other unauthorized source, either modified or unmodified.
+    If any Java language code or documentation used in my program
+    was obtained from another source, such as a textbook or website,
+    that has been clearly noted with a proper citation in the comments
+    of my program.
+**/
+
 import java.net.*;
 import java.util.*;
 import java.io.*;
@@ -16,7 +32,6 @@ public class GameStarter {
     private Player player, opponent;
     private double playerSize, playerRange, playerVelocity;
     private double playerX, playerY, opponentX, opponentY;
-    // private boolean ballDeflected = false;
 
     private int w, h, rfsCount, wtsCount;
 
@@ -29,24 +44,26 @@ public class GameStarter {
 
     private boolean active = false, reset = false;
 
-    // private boolean gameOver = false;
-
+    // Constructor that takes the needed hostname/ip address and port number
     public GameStarter(String host, int port) {
         this.host = host;
         this.port = port;
     }
 
+    // A Method for setting up a new set of Game Entities
     private void setUpGameEntities() {
         ball = new Ball(ballX, ballY, ballSize, ballVelocity, Color.BLACK);
         player = new Player(id1, playerX, playerY, playerSize, playerVelocity, playerRange, Color.BLUE, playerLives);
         opponent = new Player(id2, opponentX, opponentY, playerSize, playerVelocity, playerRange, Color.RED, playerLives);
     }
 
+    // Resets the variables and objects of this client, aling with resetting the GameCanvas
     public void reset() {
         setUpGameEntities();
         gc.resetGame(ball, player, opponent);
     }
 
+    // On a successful connection attempt, initialize the default values for the Entities.
     private void setUpConnection(DataInputStream in) {
         try {
             id1 = clientID;
@@ -90,6 +107,7 @@ public class GameStarter {
         }
     }
 
+    // Attempts to establish a connection with the GameServer
     private void connectToServer() {
         try {
             s = new Socket(host, port);
@@ -113,6 +131,8 @@ public class GameStarter {
             // Start Game:
 
             gf.setUpGUI();
+            gc.setUpGameEntities();
+            gc.setUpListeners();
             
 
         } catch (IOException e) {
@@ -122,6 +142,7 @@ public class GameStarter {
         }
     }
 
+    // Runs all the necesary Threads responsible for handling the I/O Streams
     private void runThreads() {
         ArrayList<Thread> threads = new ArrayList<Thread>();
         threads.add(new Thread(rfs));
@@ -130,10 +151,13 @@ public class GameStarter {
         for (Thread t : threads) t.start();
     }
 
+    // The class that handles inputs from the server.
+    // Runs on a looped thread.
     private class ReadFromServer extends AsyncTask {
 
         private DataInputStream in;
 
+        // Contructor that takes in the interval between loops and the I/O Stream
         public ReadFromServer(int interval, DataInputStream in) {
             super(interval);
 
@@ -141,6 +165,7 @@ public class GameStarter {
             // System.out.println("RFS Runnable created.");
         }
 
+        // The Input loop
         @Override
         public void runnable() {
             try {
@@ -152,7 +177,6 @@ public class GameStarter {
                     active = true;
                     reset = false;
                     gc.setActive(true);
-                    gc.setCanMove(true);
                 }
 
                 if (opponent != null) opponent.setLives(in.readInt());
@@ -172,13 +196,11 @@ public class GameStarter {
 
                     boolean isHit = in.readBoolean();
 
-                    player.setActive(!isHit);
+                    // player.setActive(!isHit);
                     opponent.setHitColor(isHit);
                 }
 
                 // Game Over:
-                // if (in.readBoolean() && active) { gc.gameOver(); }
-
                 in.readBoolean();
 
                 // Reset:
@@ -188,14 +210,14 @@ public class GameStarter {
                     reset();
                 }
 
-                // if (player.getLives() <= 0 || opponent.getLives() <= 0) { gc.endGameLoop(); }
             } catch (IOException e) {
                 // System.out.println(e);
                 this.endTask();
                 if (!wts.isRunning()) connectionLost();
             }
-        }
+        }  
 
+        // Receives the Start Messgae from the Server
         public void waitForStartMsg() {
             try {
                 String startMsg = in.readUTF();
@@ -210,10 +232,13 @@ public class GameStarter {
         }
     }
 
+    // The class that handles outputs to the server.
+    // Runs on a looped thread.
     private class WriteToServer extends AsyncTask {
 
         private DataOutputStream out;
 
+        // Contructor that takes in the interval between loops and the I/O Stream
         public WriteToServer(int interval, DataOutputStream out) {
             super(interval);
 
@@ -221,6 +246,7 @@ public class GameStarter {
             // System.out.println("WTS Runnable created.");
         }
 
+        // The Output loop
         @Override
         public void runnable() {
             try {
@@ -256,16 +282,17 @@ public class GameStarter {
         }
     }
 
+    // Handles Connection Loss to the GameServer
     private void connectionLost() {
         System.out.println("Connection to Server Lost.\nTerminating Program.\n");
         System.exit(0);
     }
 
+    // Allows instantiating this class using the CMD
     public static void main(String[] args) {
         String localHost = "localhost";
 
         GameStarter gs = new GameStarter(localHost, 9452);
-        // gs.setUpGameEntities();
         gs.connectToServer();
     }
 }

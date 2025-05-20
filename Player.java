@@ -1,3 +1,19 @@
+/**
+    The Player, a Controllable GameEntity. Has multiple helper classes
+    that conducts the player's actions.
+    @author Ezekiel Villasurda (236689)
+    @version 20 May 2025
+    I have not discussed the Java language code in our program
+    with anyone other than my instructor or the teaching assistants
+    assigned to this course.
+    I have not used Java language code obtained from another student,
+    or any other unauthorized source, either modified or unmodified.
+    If any Java language code or documentation used in my program
+    was obtained from another source, such as a textbook or website,
+    that has been clearly noted with a proper citation in the comments
+    of my program.
+**/
+
 import java.awt.*;
 import java.awt.event.*;
 
@@ -7,15 +23,14 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     private double size, velocity, direction, range, power;
     private double mX = 0, mY = 0;
     
-    private boolean canMove = true, canDeflect = true, canDash = true, vulnerable = true;
+    private boolean canMove = true, canDeflect = true, vulnerable = true;
     private boolean isMoving, isCharging, isDeflecting, isDeflected, isInCooldown, isGraced, isHit;
 
     private boolean mousePressed, upPressed, downPressed, leftPressed, rightPressed;
 
     protected PlayerRender render;
 
-    private AsyncTask deflectprocess, dashProcess;
-
+    // Constructor that sets all the needed attributes for the Player
     public Player(int clientID, double x, double y, double size, double velocity, double range, Color color, int lives) {
         super(x, y, size, size, color);
 
@@ -30,6 +45,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         this.render = new PlayerRender(x, y, size, color);
     }
 
+    // Getter Methods
     public int getClientID() { return this.clientID; }
     public int getLives() { return this.lives; }
 
@@ -49,6 +65,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     public boolean isCharging() { return isCharging; }
     public boolean isInCooldown() { return isInCooldown; }
     
+    // Switch-off Getter Method for Deflection
     public boolean isDeflected() {
         if (isDeflected) {
             isDeflected = false;
@@ -57,9 +74,11 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         return false; 
     }
 
+    // More Getter Methods
     public boolean isGraced() { return isGraced; }
     public boolean isHit() { return isHit; }
 
+    // Setter Methods
     public void setVelocity(double velocity) { this.velocity = velocity; }
     public void setDirection(double direction) { this.direction = direction; }
     public void setRange(double range) { this.range = range; }
@@ -72,6 +91,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
 
     public void setLives(int lives) { this.lives = Math.max(0, lives); }
 
+    // Updates the player's movement if the Player is active
     @Override
 	public void update() {
         if (!this.active || !isMoving) return;
@@ -82,6 +102,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         this.y += Math.sin(radians) * this.velocity;
 	}
 
+    // Draws the Player
 	@Override
 	public void draw(Graphics2D g2d) { 
         render.setX(this.x);
@@ -93,25 +114,19 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         render.draw(g2d);
     }
 
+    // Returns the Entity Type of the Player
 	@Override
 	public GameEntity.EntityType getType() { return EntityType.PLAYER; }
 
-
-
+    // Mouse Events
     @Override
     public void mouseClicked(MouseEvent e) {}
 
-    @Override
-    public void mousePressed(MouseEvent e) {
-        mousePressed = true;
-        // charge();
-    }
+    @Override // Detects if Mouse Pressed
+    public void mousePressed(MouseEvent e) { mousePressed = true; }
 
-    @Override
-    public void mouseReleased(MouseEvent e) {
-        mousePressed = false;
-        // deflect();
-    }
+    @Override // Detects if Mouse Released
+    public void mouseReleased(MouseEvent e) { mousePressed = false; }
 
     @Override
     public void mouseEntered(MouseEvent e) {}
@@ -120,7 +135,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     public void mouseExited(MouseEvent e) {}
 
 
-
+    // Key Pressed Events
     @Override
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
@@ -133,6 +148,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         updateMovement();
     }
 
+    // Key Released Events
     @Override
     public void keyReleased(KeyEvent e) {
         int key = e.getKeyCode();
@@ -145,9 +161,11 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         updateMovement();
     }
 
+    // Key Typed Events
     @Override
     public void keyTyped(KeyEvent e) {}
 
+    // Updates the Player's movements based on the Key Events above
     private void updateMovement() {
         if (!canMove) return;
 
@@ -161,7 +179,6 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     
         if (dx == 0 && dy == 0) {
             isMoving = false;
-            // setSpeed(0);
         } else {
             double length = Math.sqrt(dx * dx + dy * dy);
             dx /= length;
@@ -172,10 +189,10 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     
             setDirection(angle);
             isMoving = true;
-            // setSpeed(5);
         }
     }
 
+    // Collision Detection Method
     @Override
     public boolean isColliding(GameEntity e) {
         EntityType type = e.getType();
@@ -203,6 +220,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         return false;
     }
 
+    // In Range for Ball Deflect Method
     public boolean isInRange(GameEntity e) {
         // if (!canDeflect || !vulnerable) return false;
 
@@ -220,6 +238,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         return dist < r1 + r2 + this.range;
     }
 
+    // Player Render Color Setters
     public void defaultColor() { render.defaultColor(); }
     public void warningColor() { render.warningColor(); }
     public void inRangeColor() { render.inRangeColor(); }
@@ -227,30 +246,23 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
     public void hitColor() { render.hitColor(); }
 
     public void setGracedColor(boolean graced) {
-        if (graced) {
-            isGraced = true;
-            gracedColor();
-        } else {
-            isGraced = false;
-            defaultColor();
-        }
+        if (graced) { isGraced = true; gracedColor(); }
+        else { isGraced = false; defaultColor(); }
     }
 
     public void setHitColor(boolean hit) {
         if (isGraced) return;
-        if (hit) {
-            isHit = true;
-            hitColor();
-        } else {
-            isHit = false;
-            defaultColor();
-        }
+        if (hit) { isHit = true; hitColor(); }
+        else { isHit = false; defaultColor(); }
     }
 
-    public void deflectProcess(int interval, Ball ball) { if (canDeflect) deflectprocess = new Charge(interval, ball); }
+    // Starts the Deflection Process using the helper classes
+    public void deflectProcess(int interval, Ball ball) { if (canDeflect) new Charge(interval, ball); }
 
+    // Disable triggering the Deflection Process
     public void disableDeflect() { canDeflect = false; }
 
+    // Reverts the states required for Deflection
     public void revertStates() {
         canDeflect = true;
         vulnerable = true;
@@ -265,6 +277,8 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
 
     }
 
+    // The Start of the Deflection Process.
+    // Player can keep pressing their mouse to increase the deflect power
     private class Charge extends AsyncTask {
 
         private Ball ball;
@@ -290,12 +304,14 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
             power++;
             if ((!mousePressed || power >= 100) && !isHit) {
                 render.animation.endTask();
-                deflectprocess = new Deflect(interval, 0.18, ball);
+                new Deflect(interval, 0.18, ball);
                 endTask();
             }
         }
     }
 
+    // The actual deflect action, redirects the ball when in range
+    // Proceeds to the cooldown when the ball is not in range
     private class Deflect extends AsyncTask {
 
         private Ball ball;
@@ -325,7 +341,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
                 isDeflected = true;
                 safe = true;
                 ball.redirectTowards(mX, mY, power);
-                deflectprocess = new Grace(interval, 1, ball, false);
+                new Grace(interval, 1, ball, false);
                 endTask();
             }
         }
@@ -338,6 +354,8 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         }
     }
 
+    // The cooldown for when the player misses/deflects out of range
+    // Resets the states for deflection upon ending
     private class DeflectCooldown extends AsyncTask {
 
         public DeflectCooldown(int interval, double duration) {
@@ -358,6 +376,9 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         protected void finish() { revertStates(); }
     }
 
+    // Also know as Invulnerability, but a "Grace" period seemed like a shorter name
+    // Grants the player Invulnerability whenever the Ball is deflected or the Player
+    // is hit
     private class Grace extends AsyncTask {
 
         private Ball ball;
@@ -391,6 +412,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         protected void finish() { revertStates(); }
     }
 
+    // Handles the event when the Player is Hit with the Ball
     private class Hit extends AsyncTask {
 
         private Ball ball;
@@ -413,8 +435,6 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
             isGraced = false;
             vulnerable = false;
             disableDeflect();
-
-            setActive(false);
             ball.setActive(false);
         }
 
@@ -423,7 +443,7 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
 
         @Override
         protected void finish() {
-            deflectprocess = new Grace(interval, 3, ball, true);
+            new Grace(interval, 3, ball, true);
 
             render.canLook = true;
             render.r2 = 0;
@@ -436,11 +456,12 @@ public class Player extends GameEntity implements MouseListener, KeyListener {
         }
     }
 
+    // A method for triggering the Player being hit
     public void hurt(Ball ball) { 
         if (isHit || isGraced || !vulnerable || isDeflecting) return;
         
         disableDeflect();
-        deflectprocess = new Hit(10, 1, ball);
+        new Hit(10, 1, ball);
     }
 
 }

@@ -1,7 +1,9 @@
 /**
-    ...
+    The Game Canvas, responsible for drawing the game on the JFrame.
+    Handles some local game logic, especially the local hit detection
+    for the current player.
     @author Ezekiel Villasurda (236689)
-    @version 17 May 2025
+    @version 20 May 2025
     I have not discussed the Java language code in our program
     with anyone other than my instructor or the teaching assistants
     assigned to this course.
@@ -29,12 +31,14 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
 
     private volatile boolean running = true;
     private boolean isDeflected = false;
-    private boolean canMove = false, gameOver = false, reset = false;
-
-    private String overlayText = "Ready?";
+    private boolean gameOver = false, reset = false;
 
     private Thread gcThread;
 
+    private HeartsRender hr;
+    private OverlayTextRender otr;
+
+    // Constructor that instantiates the Canvas with the needed objects and variables:
     public GameCanvas (int w, int h, Ball ball, Player player, Player opponent) {
 
         this.w = w;
@@ -48,38 +52,33 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
 
         this.gcThread = new Thread(this);
 
-        // setUpInitialData();
+        this.hr = new HeartsRender(player.getLives(), opponent.getLives(), 5, 30, w, h);
+        this.otr = new OverlayTextRender(w, h);
+        this.otr.setText("Ready?");
+        
     }
 
+    // Starts and stops the Canvas for special events such as a game over.
     public void setActive(boolean active) {
         if (active) {
             this.running = true;
             this.gameOver = false;
             this.reset = false;
-            this.overlayText = null;
+            otr.setText(null);
             gcThread = new Thread(this);
             gcThread.start();
         } else {
             this.running = false;
         }
-
-        this.setCanMove(false);
     }
 
-    public void setCanMove(boolean canMove) {
-        this.canMove = canMove;
-        player.setActive(canMove);
-        
-    } 
-
+    // Method for resetting the game locally
     public void resetGame(Ball ball, Player player, Player opponent) {
         this.running = false;
         this.gameOver = false;
 
         this.reset = false;
-        this.overlayText = "Ready?";
-
-        ge.clear();
+        otr.setText("Ready?");
 
         this.ball = ball;
         this.player = player;
@@ -90,72 +89,29 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
         this.repaint();
     }
 
+    // Getter Methods
     public int getW() { return this.w; }
     public int getH() { return this.h; }
     public Player getPlayer() { return this.player; }
     public Player getOpponent() { return this.opponent; }
     public Ball getBall() { return this.ball; }
     public boolean isGameOver() { return this.gameOver; }
+    public double getMX() { return this.mX; }
+    public double getMY() { return this.mY; }
 
+    // Switch-off Getter Method for Resets
     public boolean wantsReset() {
-        if (reset) {
-            reset = false;
-            return true;
-        } else {
-            return false;
-        }
+        if (reset) { reset = false; return true; }
+        return false;
     }
 
-
-
-    public void setOverlayText(String text) {
-        this.overlayText = text;
-        repaint();
+    // Switch-off Getter Method for Deflection
+    public boolean isDeflected() {
+        if (isDeflected) { isDeflected = false; return true; }
+        return false;
     }
 
-
-    private void heartsOverlay(Graphics2D g2d) {
-        int playerLives = player.getLives();
-        int opponentLives = opponent.getLives();
-        int size = 20;
-        int gap = 5;
-
-        drawHearts(g2d, playerLives, 20, 20, gap);
-        drawHearts(g2d, opponentLives, w - ( 20 + (size + gap) * opponentLives), 20, gap);
-    }
-
-    private void drawHearts(Graphics2D g2d, int lives, int x, int y, int gap) {
-        g2d.setColor(Color.RED);
-        int heartSize = 20;
-
-        // Assuming Max Lives is 3:
-        for (int i = 0; i < lives; i++) {
-            int hx = x + i * (heartSize + gap);
-            drawHeartShape(g2d, hx, y, heartSize);
-        }
-    }
-
-    private void drawHeartShape(Graphics2D g2d, int x, int y, int size) {
-        double half = size / 2.0;
-        double quarter = size / 4.0;
-
-        // Top-left "lobe" of the heart
-        Rectangle left = new Rectangle(x, y, half, half, Color.RED);
-        left.setR(45);
-        
-        // Top-right "lobe"
-        Rectangle right = new Rectangle(x + half, y, half, half, Color.RED);
-        right.setR(45);
-
-        // Bottom triangle (rotated rectangle to mimic point)
-        Rectangle bottom = new Rectangle(x + quarter, y + quarter, half, half, Color.RED);
-        bottom.setR(45);
-
-        left.draw(g2d);
-        right.draw(g2d);
-        bottom.draw(g2d);
-    }
-
+    // Method that paints the objects/entities
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
@@ -168,31 +124,23 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
 
         for (GameEntity e : ge) e.draw(g2d);
 
-        heartsOverlay(g2d);
+        hr.draw(g2d);
+        otr.draw(g2d);
 
-        // Draw Overlay Text
-        if (overlayText != null) {
-            g2d.setColor(Color.BLACK);
-            g2d.setFont(new Font("Arial", Font.BOLD, 52));
-            FontMetrics fm = g2d.getFontMetrics();
-            int textWidth = fm.stringWidth(overlayText);
-            int x = (getWidth() - textWidth) / 2;
-            int y = getHeight() / 2;
-
-            g2d.setColor(new Color(80, 80, 80));
-            g2d.drawString(overlayText, x, y);
-        }
     }
 
+    // Method for setting up instructions before drawing the entitites
     public void setUpGameEntities() {        
         player.rotateTo(w/2, h/2);
         opponent.rotateTo(w/2, h/2);
 
+        ge.clear();
         ge.add(opponent);
         ge.add(player);
         ge.add(ball);
     }
 
+    // Method for setting up Listeners
     public void setUpListeners() {
         setFocusable(true);
         requestFocusInWindow();
@@ -205,35 +153,27 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
         addMouseListener(player);
     }
 
-    public boolean isDeflected() {
-        if (isDeflected) {
-            isDeflected = false;
-            return true;
-        }
-        return false;
-    }
-
-    public double getMX() { return this.mX; }
-
-    public double getMY() { return this.mY; }
-
+    // Tracks Current Mouse Position relative to this Component
     public void updateMousePos(MouseEvent e) {
         if (Math.abs(e.getX() - mX) <= 1 && Math.abs(e.getY() - mY) <= 1) return;
         this.mX = e.getX();
         this.mY = e.getY();
     }
 
+    // Instructions for when the game is finished by the players
     public void gameOver() {
         gameOver = true;
         this.setActive(false);
-        // String instructions = "\nPress Spacebar to Play Again.";
-        setOverlayText((player.getLives() > opponent.getLives()) ? "You Win!" : "You Lose.");
+
+        String gameOverMessage = (player.getLives() > opponent.getLives()) ? "You Win!" : "You Lose.";
+        // setOverlayText((player.getLives() > opponent.getLives()) ? "You Win!" : "You Lose.");
+        otr.setText(gameOverMessage);
     }
 
+    // The game loop, implementing runnable
     @Override
     public void run() {
         while (running) {
-
             player.setMX(mX);
             player.setMY(mY);
             player.rotateTo(mX, mY);
@@ -260,15 +200,6 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
                 
             }
 
-            // opponent.setMX(player.getCenterX());
-            // opponent.setMY(player.getCenterY());
-
-            // if (opponent.isInRange(ball) && opponent.isVulnerable()) {
-            //     // ball.isInRangeColor();
-            //     opponent.deflectProcess(10, ball);
-            //     continue;
-            // }
-
             if (player.isColliding(opponent)) handleCircleRigidBodyCollision(player, opponent);
 
             handleEntityInteraction();
@@ -278,6 +209,8 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
             for (GameEntity e : ge) if (e != ball) e.update();
 
             if (player.getLives() <= 0 || opponent.getLives() <= 0) { gameOver(); }
+
+            hr.setLives(player.getLives(), opponent.getLives());
 
             this.repaint();
 
@@ -289,6 +222,7 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
         }
     }
 
+    // Method for Handling Rigid Body Collisions between Entities
     private void handleCircleRigidBodyCollision(GameEntity e1, GameEntity e2) {
         double dx = (e1.getX() + e1.getW()) - (e2.getX() + e2.getW());
         double dy = (e1.getY() + e1.getH()) - (e2.getY() + e2.getH());
@@ -319,28 +253,26 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
         e2.setY(e2.getY() - pushY);
     }
 
+    // Method for handling Interactions between Entities
+    // Also used for setting the appropriate Colors of the Entities
     private void handleEntityInteraction() {
         if (player.isColliding(ball) && player.isVulnerable()) {
             player.hurt(ball);
         }
         
         ball.defaultColor();
-        if (player.isInRange(ball)) {
-            if (!player.isInCooldown()) {
-                ball.inRangeColor();
-            } else {
-                ball.warningColor();
-            }
-        }
+        if (player.isInRange(ball) && !player.isInCooldown()) ball.inRangeColor();
+        if (player.isInCooldown()) ball.warningColor();
         if (player.isGraced()) { ball.gracedColor(); }
         if (player.isHit()) ball.hitColor();
     }
-
+    
+    // Event Methods
     @Override
     public void mouseClicked(MouseEvent e) {}
 
-    @Override
-    public void mousePressed(MouseEvent e) { if (canMove) player.deflectProcess(10, ball); }
+    @Override // Initiate Deflect Process on Mouse Press
+    public void mousePressed(MouseEvent e) { if (running) player.deflectProcess(10, ball); }
         
     @Override
     public void mouseReleased(MouseEvent e) {}
@@ -351,13 +283,13 @@ public class GameCanvas extends JComponent implements Runnable, MouseListener, M
     @Override
     public void mouseExited(MouseEvent e) {}
 
-    @Override
-    public void mouseDragged(MouseEvent e) { if (canMove) updateMousePos(e); }
+    @Override // Update Mouse Position on Mouse Drag
+    public void mouseDragged(MouseEvent e) { if (running) updateMousePos(e); }
 
-    @Override
-    public void mouseMoved(MouseEvent e) { if (canMove) updateMousePos(e); }
+    @Override // Update Mouse Position on Mouse Moved
+    public void mouseMoved(MouseEvent e) { if (running) updateMousePos(e); }
 
-    @Override
+    @Override // Detect when the player Presses the R Key
     public void keyPressed(KeyEvent e) { if (e.getKeyCode() == KeyEvent.VK_R && gameOver) reset = true; }
 
     @Override

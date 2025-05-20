@@ -1,7 +1,8 @@
 /**
-    ...
+    The Player Render, the class that actually draws the Player Entity.
+    Separated from the Player to keep the code tidy.
     @author Ezekiel Villasurda (236689)
-    @version 17 March 2025
+    @version 20 May 2025
     I have not discussed the Java language code in our program
     with anyone other than my instructor or the teaching assistants
     assigned to this course.
@@ -14,8 +15,6 @@
 **/
 
 import java.awt.*;
-// import java.awt.event.*;
-// import java.awt.geom.*;
 
 public class PlayerRender extends Drawable {
     
@@ -29,6 +28,7 @@ public class PlayerRender extends Drawable {
     private final static Color inRangeColor = new Color(0, 255, 0);
     private final static Color gracedColor = new Color(200, 200, 200);
 
+    // Constructor for setting the atributes of the Player Render
     public PlayerRender(double x, double y, double size, Color color) {
         super(x, y, size, size, color);
 
@@ -43,6 +43,7 @@ public class PlayerRender extends Drawable {
 
     }
 
+    // Draws the Player Render
     @Override
     public void draw(Graphics2D g2d) {
         double angleBat = 90;
@@ -77,6 +78,7 @@ public class PlayerRender extends Drawable {
 
     }
 
+    // Plays the Charge Animation of the Player
     protected void playChargeAnim(double duration) { 
         animation.endTask();
         animation = new ChargeAnimation(10); 
@@ -103,6 +105,7 @@ public class PlayerRender extends Drawable {
 
     }
 
+    // Plays the Deflect Animation of the Player
     protected void playDeflectAnim(double duration) { 
         animation.endTask();
         animation = new DeflectAnimation(10, duration);
@@ -125,6 +128,7 @@ public class PlayerRender extends Drawable {
         protected void finish() { canLook = true; }
     }
 
+    // Rotates the Player twoards a point in the Canvas
     protected void rotateTo(double x, double y) {
         if (!canLook) return;
 
@@ -140,16 +144,12 @@ public class PlayerRender extends Drawable {
         this.setR(angle);
     }
 
+    // Player Render Color Setters
     protected void changeColor(Color color) { currentColor = color; }
-
     public void defaultColor() { currentColor = this.color; }
-
     public void hitColor() { currentColor = this.hitColor; }
-
     public void warningColor() { currentColor = this.warningColor; }
-
     public void inRangeColor() { currentColor = this.inRangeColor; }
-
     public void gracedColor() { currentColor = this.gracedColor; }
 
 }

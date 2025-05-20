@@ -1,3 +1,19 @@
+/**
+    The Ball, a server-handled GameEntity. Bounces around its housed component
+    and can be influenced by a Player.
+    @author Ezekiel Villasurda (236689)
+    @version 20 May 2025
+    I have not discussed the Java language code in our program
+    with anyone other than my instructor or the teaching assistants
+    assigned to this course.
+    I have not used Java language code obtained from another student,
+    or any other unauthorized source, either modified or unmodified.
+    If any Java language code or documentation used in my program
+    was obtained from another source, such as a textbook or website,
+    that has been clearly noted with a proper citation in the comments
+    of my program.
+**/
+
 import java.awt.*;
 import java.util.Random;
 
@@ -16,6 +32,7 @@ public class Ball extends GameEntity {
     private final static Color warningColor = new Color(255, 165, 0);
     private final static Color inRangeColor = new Color(0, 255, 0);
 
+    // Constructor that sets all the needed attributes for the Ball
     public Ball(double x, double y, double size, double velocity, Color color) {
         super(x, y, size, size, color);
         
@@ -28,9 +45,11 @@ public class Ball extends GameEntity {
         this.currentColor = color;
     }
 
+    // Getter Methods
     public double getVelocity() {return this.velocity; }
     public void setVelocity(double velocity) { this.velocity = velocity; }
 
+    // Updates the Ball's movement
     @Override
 	public void update() {
         double powerMultiplier = 15;
@@ -45,6 +64,7 @@ public class Ball extends GameEntity {
         this.y += Math.sin(radians) * powerAndVelocity;
 	}
 
+    // Draws the Ball
 	@Override
 	public void draw(Graphics2D g2d) { 
         render.setX(this.x);
@@ -55,15 +75,18 @@ public class Ball extends GameEntity {
         render.draw(g2d);
     }
 
+    // Returns the Entity Type of the Ball
 	@Override
 	public GameEntity.EntityType getType() { return EntityType.BALL; }
 
+    // Resets the velocity and acceleration of the ball
     public void resetVelocity() {
         velocity = initialVelocity;
         power = 0;
         delta = 1;
     }
 
+    // Bounces the Ball in two ways: from a vertical wall or from a horizontal wall
     public void bounce(boolean vertical) {
         if (vertical) {
             // Reflect horizontally (e.g., left or right wall)
@@ -76,6 +99,7 @@ public class Ball extends GameEntity {
         if (direction < 0) direction += 360;
     }
 
+    // Redirects the Ball towards the Mouse position of the Player that deflected it
     public void redirectTowards(double x, double y, double power) {
         double dx = x - (this.x + (this.size/2));
         double dy = y - (this.y + (this.size/2));
@@ -87,6 +111,7 @@ public class Ball extends GameEntity {
         this.power += ((power < 25) ? 0 : power);
     }
 
+    // Collision Detection
     public boolean isColliding(GameEntity e) {
         EntityType type = e.getType();
         // Circle on Circle Collisions
@@ -110,18 +135,17 @@ public class Ball extends GameEntity {
         return false;
     }
 
+    // Ball Render Color Setters
     public void defaultColor() { currentColor = this.color; }
-
     public void inRangeColor() { currentColor = inRangeColor; }
-
     public void warningColor() { currentColor = warningColor; }
-
     public void gracedColor() { currentColor = gracedColor; }
-
     public void hitColor() { currentColor = hitColor; }
 
+    // Stops the movement of the Ball entirely
     public void endProcess() { if (ballProcess != null) ballProcess.endTask(); }
 
+    // Makes the Ball move in the Game Server
     public void startProcess(int w, int h) {
         ballProcess = new AsyncTask(10) {
             @Override
